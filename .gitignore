@@ -1,0 +1,27 @@
+# Compiled object files
+*.o
+
+# Executables
+main
+test_layers
+test_oop
+test_network
+
+# Eigen library (if included, or let users install separately)
+eigen-5.0.0/
+
+# macOS
+.DS_Store
+
+# Editor files
+*.swp
+*~
+.vscode/
+.idea/
+
+# Build artifacts (if any)
+build/
+bin/
+*.a
+*.so
+*.dylib
