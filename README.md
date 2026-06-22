@@ -6,14 +6,42 @@ A small C++ neural-network framework used as the starting point for a higher-per
 
 ```text
 dl/
-|-- include/dl/          Public headers
-|-- src/                 Library implementation files
-|-- tests/               Test and demo executables
-|-- docs/                Project notes
-|-- mnist/               MNIST data files
-|-- images/              README/report images
-|-- CMakeLists.txt       Main CMake build
-`-- Makefile             Thin CMake wrapper
+|-- include/dl/
+|   |-- core/             Device, dtype, shape, errors
+|   |-- tensor/           Tensor, storage, tensor views
+|   |-- layers/           Neural-network layer abstractions
+|   |-- ops/              Public operation APIs
+|   |-- kernels/          Kernel launch declarations
+|   |-- optim/            Optimizers
+|   |-- runtime/          Network and execution runtime
+|   `-- data/             Data loading
+|-- src/
+|   |-- core/
+|   |-- tensor/
+|   |-- layers/
+|   |-- ops/
+|   |-- kernels/
+|   |   `-- cuda/         Future CUDA .cu implementations
+|   |-- optim/
+|   |-- runtime/
+|   `-- data/
+|-- tests/
+|   |-- tensor/
+|   |-- ops/
+|   |-- layers/
+|   |-- optim/
+|   |-- runtime/
+|   `-- data/
+|-- benchmarks/
+|   |-- gemm/
+|   |-- softmax/
+|   |-- attention/
+|   `-- layernorm/
+|-- third_party/
+|-- docs/
+|-- mnist/
+|-- CMakeLists.txt
+`-- Makefile
 ```
 
 ## Build With CMake
@@ -83,8 +111,9 @@ make clean
 The next architecture step is to keep the current Eigen code as a CPU reference path while introducing GPU-oriented pieces:
 
 ```text
-Tensor / Parameter
-ops/gemm, ops/softmax, ops/attention
-kernels/cuda
-benchmarks/gemm, benchmarks/softmax, benchmarks/attention
+core/device, core/dtype, core/shape
+tensor/Tensor, tensor/Storage, tensor/Parameter
+ops/gemm, ops/softmax, ops/attention, ops/layernorm
+kernels/cuda/*.cu
+benchmarks/gemm, benchmarks/softmax, benchmarks/attention, benchmarks/layernorm
 ```

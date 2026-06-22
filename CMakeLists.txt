@@ -30,7 +30,9 @@ add_library(dl_core
 target_include_directories(dl_core
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include/dl
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/core
         ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/data
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/kernels
         ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/layers
         ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/ops
         ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/optim
@@ -69,16 +71,16 @@ target_compile_options(dl_core
 if(DL_BUILD_TESTS)
     enable_testing()
 
-    add_executable(test_layers tests/test_layers.cpp)
+    add_executable(test_layers tests/ops/test_layers.cpp)
     target_link_libraries(test_layers PRIVATE dl_core)
 
-    add_executable(test_oop tests/test_oop.cpp)
+    add_executable(test_oop tests/layers/test_oop.cpp)
     target_link_libraries(test_oop PRIVATE dl_core)
 
-    add_executable(test_network tests/test_network.cpp)
+    add_executable(test_network tests/runtime/test_network.cpp)
     target_link_libraries(test_network PRIVATE dl_core)
 
-    add_executable(test_train_mnist tests/test_train_mnist.cpp)
+    add_executable(test_train_mnist tests/runtime/test_train_mnist.cpp)
     target_link_libraries(test_train_mnist PRIVATE dl_core)
 
     foreach(test_name IN ITEMS test_layers test_oop test_network test_train_mnist)
