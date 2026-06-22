@@ -15,21 +15,27 @@ set(DL_EIGEN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/eigen-5.0.0"
     CACHE PATH "Path to an Eigen include directory")
 
 add_library(dl_core
-    src/DataLoader.cpp
-    src/Layer.cpp
-    src/Layers.cpp
-    src/LinearLayer.cpp
-    src/MseLoss.cpp
-    src/Network.cpp
-    src/Optimizer.cpp
-    src/ParametricReLU.cpp
-    src/SigmoidLayer.cpp
-    src/SoftmaxCrossEntropyLoss.cpp
+    src/data/DataLoader.cpp
+    src/layers/Layer.cpp
+    src/layers/LinearLayer.cpp
+    src/layers/ParametricReLU.cpp
+    src/layers/SigmoidLayer.cpp
+    src/ops/Layers.cpp
+    src/ops/MseLoss.cpp
+    src/ops/SoftmaxCrossEntropyLoss.cpp
+    src/optim/Optimizer.cpp
+    src/runtime/Network.cpp
 )
 
 target_include_directories(dl_core
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include/dl
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/data
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/layers
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/ops
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/optim
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/runtime
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/tensor
 )
 
 if(EXISTS "${DL_EIGEN_INCLUDE_DIR}/Eigen/Dense")
