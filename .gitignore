@@ -26,3 +26,5 @@ bin/
 *.a
 *.so
 *.dylib
+/.cuda-driver-lib
+/ncu_reports

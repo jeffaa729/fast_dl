@@ -1,19 +1,48 @@
 # Deep Learning Library
 
-A small C++ neural-network framework used as the starting point for a higher-performance deep learning library. The current implementation uses Eigen as the CPU reference backend while the repo layout leaves room for future GPU tensors, kernels, and operation-specific benchmarks.
+A small C++ GPU-first neural-network framework used as the starting point for a higher-performance deep learning library. The current active build focuses on CUDA tensors, kernels, tests, and operation-specific benchmarks.
 
 ## Project Layout
 
 ```text
 dl/
-|-- include/dl/          Public headers
-|-- src/                 Library implementation files
-|-- tests/               Test and demo executables
-|-- docs/                Project notes
-|-- mnist/               MNIST data files
-|-- images/              README/report images
-|-- CMakeLists.txt       Main CMake build
-`-- Makefile             Thin CMake wrapper
+|-- include/dl/
+|   |-- core/             Device, dtype, shape, errors
+|   |-- tensor/           Tensor, storage, tensor views
+|   |-- layers/           Neural-network layer abstractions
+|   |-- ops/              Public operation APIs
+|   |-- kernels/          Kernel launch declarations
+|   |-- optim/            Optimizers
+|   |-- runtime/          Network and execution runtime
+|   `-- data/             Data loading
+|-- src/
+|   |-- core/
+|   |-- tensor/
+|   |-- layers/
+|   |-- ops/
+|   |-- kernels/
+|   |   `-- cuda/         Future CUDA .cu implementations
+|   |-- optim/
+|   |-- runtime/
+|   `-- data/
+|-- tests/
+|   |-- tensor/
+|   |-- ops/
+|   |-- layers/
+|   |-- optim/
+|   |-- runtime/
+|   |-- data/
+|   `-- benchmarks/
+|       |-- gemm/
+|       |-- softmax/
+|       |-- transpose/
+|       |-- reduction/
+|       `-- vector_add/
+|-- third_party/
+|-- docs/
+|-- mnist/
+|-- CMakeLists.txt
+`-- Makefile
 ```
 
 ## Build With CMake
@@ -23,18 +52,12 @@ cmake -S . -B build
 cmake --build build
 ```
 
-The build first looks for Eigen in `./eigen-5.0.0`, then for a system `Eigen3` package. If neither exists, CMake can download Eigen 3.4.0 automatically through `FetchContent`.
+This GPU-first build requires the CUDA Toolkit.
 
-To use a specific Eigen checkout:
-
-```bash
-cmake -S . -B build -DDL_EIGEN_INCLUDE_DIR=/path/to/eigen
-```
-
-To disable automatic Eigen download:
+To set the CUDA architecture explicitly:
 
 ```bash
-cmake -S . -B build -DDL_FETCH_EIGEN=OFF
+cmake -S . -B build -DCMAKE_CUDA_ARCHITECTURES=86
 ```
 
 ## Build Targets
@@ -48,10 +71,8 @@ dl_core
 Test/demo executables:
 
 ```text
-test_layers
-test_oop
-test_network
-test_train_mnist
+tensor_test
+dl_benchmarks
 ```
 
 ## Run Tests
@@ -60,13 +81,27 @@ test_train_mnist
 ctest --test-dir build --output-on-failure
 ```
 
-For quick smoke testing, run:
+Run benchmarks:
 
 ```bash
-ctest --test-dir build -R "test_layers|test_oop|test_network" --output-on-failure
+./build/dl_benchmarks all
 ```
 
-`test_train_mnist` is also built by default, but it performs a longer MNIST training run.
+## Linux Test, Benchmark, And NCU Script
+
+```bash
+bash scripts/run_linux_benchmarks.sh
+```
+
+Optional overrides:
+
+```bash
+CUDA_ARCH=86 BENCHMARKS="gemm softmax" bash scripts/run_linux_benchmarks.sh
+GEMM_N=1024 SOFTMAX_ROWS=4096 SOFTMAX_COLS=1024 bash scripts/run_linux_benchmarks.sh
+```
+
+The script builds `tensor_test` and `dl_benchmarks`, runs CTest, runs each benchmark, saves Nsight Compute reports under `ncu_reports/`, and writes selected CSV metrics.
+It also prints a compact NCU summary with kernel runtime in microseconds plus DRAM, SM, L2, and L1 throughput as percent of peak.
 
 ## Legacy Make Commands
 
@@ -80,11 +115,12 @@ make clean
 
 ## Future Direction
 
-The next architecture step is to keep the current Eigen code as a CPU reference path while introducing GPU-oriented pieces:
+The next architecture step is to connect the CUDA kernels to higher-level tensor operations:
 
 ```text
-Tensor / Parameter
-ops/gemm, ops/softmax, ops/attention
-kernels/cuda
-benchmarks/gemm, benchmarks/softmax, benchmarks/attention
+core/device, core/dtype, core/shape
+tensor/Tensor, tensor/Storage, tensor/Parameter
+ops/gemm, ops/softmax, ops/attention, ops/layernorm
+kernels/cuda/*.cu
+tests/benchmarks/gemm, tests/benchmarks/softmax, tests/benchmarks/attention, tests/benchmarks/layernorm
 ```
