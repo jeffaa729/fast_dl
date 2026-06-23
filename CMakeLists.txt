@@ -14,7 +14,12 @@ option(DL_FETCH_EIGEN "Download Eigen with CMake if it is not found locally" ON)
 set(DL_EIGEN_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/eigen-5.0.0"
     CACHE PATH "Path to an Eigen include directory")
 
+find_package(CUDAToolkit REQUIRED)
+
 add_library(dl_core
+    src/core/Device.cpp
+    src/core/DType.cpp
+    src/core/Shape.cpp
     src/data/DataLoader.cpp
     src/layers/Layer.cpp
     src/layers/LinearLayer.cpp
@@ -25,6 +30,7 @@ add_library(dl_core
     src/ops/SoftmaxCrossEntropyLoss.cpp
     src/optim/Optimizer.cpp
     src/runtime/Network.cpp
+    src/tensor/Tensor.cpp
 )
 
 target_include_directories(dl_core
@@ -62,6 +68,8 @@ else()
     endif()
 endif()
 
+target_link_libraries(dl_core PUBLIC CUDA::cudart)
+
 target_compile_options(dl_core
     PRIVATE
         $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wall -Wextra>
@@ -71,19 +79,10 @@ target_compile_options(dl_core
 if(DL_BUILD_TESTS)
     enable_testing()
 
-    add_executable(test_layers tests/ops/test_layers.cpp)
-    target_link_libraries(test_layers PRIVATE dl_core)
+    add_executable(tensor_test tests/tensor/test_tensor.cpp)
+    target_link_libraries(tensor_test PRIVATE dl_core)
 
-    add_executable(test_oop tests/layers/test_oop.cpp)
-    target_link_libraries(test_oop PRIVATE dl_core)
-
-    add_executable(test_network tests/runtime/test_network.cpp)
-    target_link_libraries(test_network PRIVATE dl_core)
-
-    add_executable(test_train_mnist tests/runtime/test_train_mnist.cpp)
-    target_link_libraries(test_train_mnist PRIVATE dl_core)
-
-    foreach(test_name IN ITEMS test_layers test_oop test_network test_train_mnist)
+    foreach(test_name IN ITEMS tensor_test)
         add_test(NAME ${test_name} COMMAND ${test_name})
         set_tests_properties(${test_name} PROPERTIES
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
