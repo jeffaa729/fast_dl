@@ -25,6 +25,7 @@ add_library(dl_core
     src/core/Device.cpp
     src/core/DType.cpp
     src/core/Shape.cpp
+    src/ops/Softmax.cpp
     src/tensor/Tensor.cpp
 )
 
@@ -53,7 +54,7 @@ target_include_directories(dl_cuda_kernels
         ${CMAKE_CURRENT_SOURCE_DIR}/include/dl/kernels
 )
 
-target_link_libraries(dl_core PUBLIC CUDA::cudart)
+target_link_libraries(dl_core PUBLIC dl_cuda_kernels CUDA::cudart)
 target_link_libraries(dl_cuda_kernels PUBLIC CUDA::cudart CUDA::cublas)
 
 target_compile_options(dl_core
@@ -74,7 +75,13 @@ if(DL_BUILD_TESTS)
     add_executable(tensor_test tests/tensor/test_tensor.cpp)
     target_link_libraries(tensor_test PRIVATE dl_core)
 
-    foreach(test_name IN ITEMS tensor_test)
+    add_executable(tensor_copy_test tests/tensor/tensor_copy_test.cpp)
+    target_link_libraries(tensor_copy_test PRIVATE dl_core)
+
+    add_executable(softmax_tensor_test tests/tensor/softmax_tensor_test.cpp)
+    target_link_libraries(softmax_tensor_test PRIVATE dl_core)
+
+    foreach(test_name IN ITEMS tensor_test tensor_copy_test softmax_tensor_test)
         add_test(NAME ${test_name} COMMAND ${test_name})
         set_tests_properties(${test_name} PROPERTIES
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")

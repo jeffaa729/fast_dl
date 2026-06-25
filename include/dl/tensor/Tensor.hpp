@@ -31,6 +31,11 @@ public:
     std::size_t nbytes() const;
     bool defined() const;
 
+    void copy_from_host(const void* src, std::size_t bytes);
+    void copy_to_host(void* dst, std::size_t bytes) const;
+    void copy_from(const Tensor& src);
+    void copy_to(Tensor& dst) const;
+
 private:
     void* data_ = nullptr;
     Shape shape_;

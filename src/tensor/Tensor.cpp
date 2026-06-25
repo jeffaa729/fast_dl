@@ -96,3 +96,53 @@ void Tensor::release() {
     }
     data_ = nullptr;
 }
+
+void Tensor::copy_from_host(const void* src, std::size_t bytes) {
+    if (bytes > nbytes()) {
+        throw std::runtime_error("copy_from_host exceeds tensor size");
+    }
+    if (bytes == 0) return;
+
+    if (!device_.is_cuda()) {
+        throw std::runtime_error("copy_from_host currently supports CUDA tensors only");
+    }
+
+    check_cuda(cudaSetDevice(device_.index), "cudaSetDevice failed");
+    check_cuda(cudaMemcpy(data_, src, bytes, cudaMemcpyHostToDevice),
+               "cudaMemcpy host to device failed");
+}
+
+void Tensor::copy_to_host(void* dst, std::size_t bytes) const {
+    if (bytes > nbytes()) {
+        throw std::runtime_error("copy_to_host exceeds tensor size");
+    }
+    if (bytes == 0) return;
+
+    if (!device_.is_cuda()) {
+        throw std::runtime_error("copy_to_host currently supports CUDA tensors only");
+    }
+
+    check_cuda(cudaSetDevice(device_.index), "cudaSetDevice failed");
+    check_cuda(cudaMemcpy(dst, data_, bytes, cudaMemcpyDeviceToHost),
+               "cudaMemcpy device to host failed");
+}
+
+void Tensor::copy_from(const Tensor& src) {
+    if (src.nbytes() != nbytes()) {
+        throw std::runtime_error("tensor copy size mismatch");
+    }
+    if (nbytes() == 0) return;
+
+    if (src.device().is_cuda() && device_.is_cuda()) {
+        check_cuda(cudaSetDevice(device_.index), "cudaSetDevice failed");
+        check_cuda(cudaMemcpy(data_, src.data(), nbytes(), cudaMemcpyDeviceToDevice),
+                   "cudaMemcpy device to device failed");
+        return;
+    }
+
+    throw std::runtime_error("copy_from currently supports CUDA to CUDA only");
+}
+
+void Tensor::copy_to(Tensor& dst) const {
+    dst.copy_from(*this);
+}
