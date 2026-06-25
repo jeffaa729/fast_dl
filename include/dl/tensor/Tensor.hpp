@@ -3,9 +3,9 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "Device.hpp"
-#include "DType.hpp"
-#include "Shape.hpp"
+#include <dl/core/Device.hpp>
+#include <dl/core/DType.hpp>
+#include <dl/core/Shape.hpp>
 
 class Tensor {
 public:

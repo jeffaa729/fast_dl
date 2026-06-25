@@ -1,12 +1,13 @@
 #include <cmath>
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
-#include "Device.hpp"
-#include "DType.hpp"
-#include "Shape.hpp"
-#include "Softmax.hpp"
-#include "Tensor.hpp"
+#include <dl/core/Device.hpp>
+#include <dl/core/DType.hpp>
+#include <dl/core/Shape.hpp>
+#include <dl/ops/Softmax.hpp>
+#include <dl/tensor/Tensor.hpp>
 
 namespace {
 

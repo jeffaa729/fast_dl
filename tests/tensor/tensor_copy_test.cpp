@@ -2,10 +2,10 @@
 #include <iostream>
 #include <vector>
 
-#include "Device.hpp"
-#include "DType.hpp"
-#include "Shape.hpp"
-#include "Tensor.hpp"
+#include <dl/core/Device.hpp>
+#include <dl/core/DType.hpp>
+#include <dl/core/Shape.hpp>
+#include <dl/tensor/Tensor.hpp>
 
 int main() {
     const std::vector<float> input = {1.0f, 2.0f, 3.0f, 4.0f};

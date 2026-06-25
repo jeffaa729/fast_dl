@@ -1,9 +1,9 @@
 #include <iostream>
 
-#include "Device.hpp"
-#include "DType.hpp"
-#include "Shape.hpp"
-#include "Tensor.hpp"
+#include <dl/core/Device.hpp>
+#include <dl/core/DType.hpp>
+#include <dl/core/Shape.hpp>
+#include <dl/tensor/Tensor.hpp>
 
 int main() {
     Tensor x(Shape({2, 3}), DType::Float32, Device(DeviceType::CUDA, 0));

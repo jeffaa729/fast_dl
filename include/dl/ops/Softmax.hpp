@@ -2,12 +2,12 @@
 
 #include <cstddef>
 
-#include "Tensor.hpp"
+#include <dl/tensor/Tensor.hpp>
 
 namespace dl::ops {
 
-Tensor softmax(
-    const Tensor& input,
+::Tensor softmax(
+    const ::Tensor& input,
     std::size_t rows,
     std::size_t cols);
 
