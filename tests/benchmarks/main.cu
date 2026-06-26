@@ -13,7 +13,7 @@ void print_usage(const char* program) {
               << "  " << program << " vector_add [elements]\n"
               << "  " << program << " transpose [n]\n"
               << "  " << program << " reduction [elements]\n"
-              << "  " << program << " gemm [n]\n"
+              << "  " << program << " gemm [m] [n] [k]\n"
               << "  " << program << " softmax [rows] [cols]\n";
 }
 
@@ -30,7 +30,7 @@ int main(int argc, char** argv) {
         std::cout << '\n';
         status |= dl::bench::reduction_benchmark(1ULL << 24);
         std::cout << '\n';
-        status |= dl::bench::gemm_benchmark(512);
+        status |= dl::bench::gemm_benchmark(512, 512, 512);
         std::cout << '\n';
         status |= dl::bench::softmax_benchmark(4096, 1024);
         return status == EXIT_SUCCESS ? EXIT_SUCCESS : EXIT_FAILURE;
@@ -57,9 +57,13 @@ int main(int argc, char** argv) {
     }
 
     if (benchmark == "gemm") {
+        const std::size_t m =
+            argc > 2 ? dl::bench::parse_positive_size(argv[2], "m") : 512;
         const std::size_t n =
-            argc > 2 ? dl::bench::parse_positive_size(argv[2], "n") : 512;
-        return dl::bench::gemm_benchmark(n);
+            argc > 3 ? dl::bench::parse_positive_size(argv[3], "n") : m;
+        const std::size_t k =
+            argc > 4 ? dl::bench::parse_positive_size(argv[4], "k") : m;
+        return dl::bench::gemm_benchmark(m, n, k);
     }
 
     if (benchmark == "softmax") {

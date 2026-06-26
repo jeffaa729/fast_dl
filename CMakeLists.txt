@@ -22,12 +22,14 @@ option(DL_BUILD_BENCHMARKS "Build CUDA benchmark executable" ON)
 find_package(CUDAToolkit REQUIRED)
 
 add_library(dl_core
+    src/core/CudaUtils.cpp
     src/core/Device.cpp
     src/core/DType.cpp
     src/core/Shape.cpp
     src/ops/Softmax.cpp
     src/tensor/Tensor.cpp
     src/tensor/TensorImpl.cpp
+    src/ops/Matmul.cpp
 )
 
 add_library(dl_cuda_kernels
@@ -82,7 +84,10 @@ if(DL_BUILD_TESTS)
     add_executable(softmax_tensor_test tests/tensor/softmax_tensor_test.cpp)
     target_link_libraries(softmax_tensor_test PRIVATE dl_core)
 
-    foreach(test_name IN ITEMS tensor_test tensor_copy_test softmax_tensor_test)
+    add_executable(matmul_tensor_test tests/tensor/matmul_tensor_test.cpp)
+    target_link_libraries(matmul_tensor_test PRIVATE dl_core)
+
+    foreach(test_name IN ITEMS tensor_test tensor_copy_test softmax_tensor_test matmul_tensor_test)
         add_test(NAME ${test_name} COMMAND ${test_name})
         set_tests_properties(${test_name} PROPERTIES
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")

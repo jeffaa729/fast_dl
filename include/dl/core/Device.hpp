@@ -2,6 +2,8 @@
 
 #include <string>
 
+namespace dl {
+
 enum class DeviceType {
     CPU,
     CUDA
@@ -18,3 +20,8 @@ public:
     bool is_cpu() const;
     std::string str() const;
 };
+
+}  // namespace dl
+
+using DeviceType = dl::DeviceType;
+using Device = dl::Device;

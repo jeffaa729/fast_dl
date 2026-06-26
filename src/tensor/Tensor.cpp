@@ -4,6 +4,8 @@
 
 #include <stdexcept>
 
+namespace dl {
+
 namespace {
 
 const Shape& empty_shape() {
@@ -15,6 +17,29 @@ const Shape& empty_shape() {
 
 Tensor::Tensor(const Shape& shape, DType dtype, Device device)
     : impl_(std::make_shared<TensorImpl>(shape, dtype, device)) {}
+
+Tensor Tensor::empty(const Shape& shape, DType dtype, Device device) {
+    return Tensor(shape, dtype, device);
+}
+
+Tensor Tensor::zeros(const Shape& shape, DType dtype, Device device) {
+    Tensor tensor(shape, dtype, device);
+    tensor.zero_();
+    return tensor;
+}
+
+Tensor Tensor::empty_like(const Tensor& other) {
+    if (!other.defined()) {
+        throw std::runtime_error("empty_like requires a defined tensor");
+    }
+    return Tensor(other.shape(), other.dtype(), other.device());
+}
+
+Tensor Tensor::zeros_like(const Tensor& other) {
+    Tensor tensor = empty_like(other);
+    tensor.zero_();
+    return tensor;
+}
 
 void* Tensor::data() {
     return impl_ ? impl_->data() : nullptr;
@@ -72,3 +97,12 @@ void Tensor::copy_from(const Tensor& src) {
 void Tensor::copy_to(Tensor& dst) const {
     dst.copy_from(*this);
 }
+
+void Tensor::zero_() {
+    if (!impl_) {
+        throw std::runtime_error("zero_ requires a defined tensor");
+    }
+    impl_->zero_();
+}
+
+}  // namespace dl

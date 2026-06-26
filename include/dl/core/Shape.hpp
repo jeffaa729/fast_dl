@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+namespace dl {
+
 class Shape {
 public:
     std::vector<int64_t> dims;
@@ -18,3 +20,7 @@ public:
     int64_t operator[](int index) const;
     std::string str() const;
 };
+
+}  // namespace dl
+
+using Shape = dl::Shape;

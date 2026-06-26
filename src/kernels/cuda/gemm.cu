@@ -22,29 +22,30 @@ void cublas_check(cublasStatus_t status) {
 
 // Naive kernel: one thread computes one C[row, col].
 __global__ void gemm_naive_kernel(const float* a, const float* b, float* c,
-                                  int N) {
+                                  int m, int n, int k) {
     const int col = blockDim.x * blockIdx.x + threadIdx.x;
     const int row = blockDim.y * blockIdx.y + threadIdx.y;
-    if (row < N && col < N) {
+    if (row < m && col < n) {
         float res = 0.0f;
-        for (int k = 0; k < N; k++) {
-            res += a[row * N + k] * b[k * N + col];
+        for (int kk = 0; kk < k; kk++) {
+            res += a[row * k + kk] * b[kk * n + col];
         }
-        c[row * N + col] = res;
+        c[row * n + col] = res;
     }
 }
 
-void launch_gemm_naive(const float* a, const float* b, float* c, int N) {
+void launch_gemm_naive(const float* a, const float* b, float* c,
+                       int m, int n, int k) {
     constexpr int tile_dim = 16;
     const dim3 threads(tile_dim, tile_dim);
-    const dim3 blocks((N + tile_dim - 1) / tile_dim,
-                      (N + tile_dim - 1) / tile_dim);
-    gemm_naive_kernel<<<blocks, threads>>>(a, b, c, N);
+    const dim3 blocks((n + tile_dim - 1) / tile_dim,
+                      (m + tile_dim - 1) / tile_dim);
+    gemm_naive_kernel<<<blocks, threads>>>(a, b, c, m, n, k);
 }
 
 // Tiled kernel: cache A and B tiles in shared memory.
 __global__ void gemm_tiled_kernel(const float* a, const float* b, float* c,
-                                  int N) {
+                                  int m, int n, int k) {
     __shared__ float As[TS][TS];
     __shared__ float Bs[TS][TS];
 
@@ -54,33 +55,34 @@ __global__ void gemm_tiled_kernel(const float* a, const float* b, float* c,
     const int col = blockIdx.x * TS + tx;
     float acc = 0.0f;
 
-    for (int t = 0; t < (N + TS - 1) / TS; t++) {
+    for (int t = 0; t < (k + TS - 1) / TS; t++) {
         const int tiled_col = t * TS + tx;
         const int tiled_row = t * TS + ty;
-        As[ty][tx] = (row < N && tiled_col < N) ? a[row * N + tiled_col] : 0.0f;
-        Bs[ty][tx] = (tiled_row < N && col < N) ? b[tiled_row * N + col] : 0.0f;
+        As[ty][tx] = (row < m && tiled_col < k) ? a[row * k + tiled_col] : 0.0f;
+        Bs[ty][tx] = (tiled_row < k && col < n) ? b[tiled_row * n + col] : 0.0f;
         __syncthreads();
 
-        for (int k = 0; k < TS; k++) {
-            acc += As[ty][k] * Bs[k][tx];
+        for (int kk = 0; kk < TS; kk++) {
+            acc += As[ty][kk] * Bs[kk][tx];
         }
         __syncthreads();
     }
 
-    if (row < N && col < N) {
-        c[row * N + col] = acc;
+    if (row < m && col < n) {
+        c[row * n + col] = acc;
     }
 }
 
-void launch_gemm_tiled(const float* a, const float* b, float* c, int N) {
+void launch_gemm_tiled(const float* a, const float* b, float* c,
+                       int m, int n, int k) {
     const dim3 threads(TS, TS);
-    const dim3 blocks((N + TS - 1) / TS, (N + TS - 1) / TS);
-    gemm_tiled_kernel<<<blocks, threads>>>(a, b, c, N);
+    const dim3 blocks((n + TS - 1) / TS, (m + TS - 1) / TS);
+    gemm_tiled_kernel<<<blocks, threads>>>(a, b, c, m, n, k);
 }
 
 // Register-blocked kernel: each thread computes an 8x8 C tile.
 __global__ void gemm_register_kernel(const float* A, const float* B, float* C,
-                                     int N) {
+                                     int m, int n, int k) {
     __shared__ float As[BM][BK];
     __shared__ float Bs[BK][BN];
 
@@ -96,15 +98,15 @@ __global__ void gemm_register_kernel(const float* A, const float* B, float* C,
 
     float c_reg[TM][TN] = {};
 
-    for (int tile_k = 0; tile_k < (N + BK - 1) / BK; ++tile_k) {
+    for (int tile_k = 0; tile_k < (k + BK - 1) / BK; ++tile_k) {
         for (int idx = tid; idx < BM * BK; idx += threads_per_block) {
             const int row = idx / BK;
             const int col = idx % BK;
             const int global_row = block_row + row;
             const int global_col = tile_k * BK + col;
             As[row][col] =
-                (global_row < N && global_col < N)
-                    ? A[global_row * N + global_col]
+                (global_row < m && global_col < k)
+                    ? A[global_row * k + global_col]
                     : 0.0f;
         }
 
@@ -114,21 +116,21 @@ __global__ void gemm_register_kernel(const float* A, const float* B, float* C,
             const int global_row = tile_k * BK + row;
             const int global_col = block_col + col;
             Bs[row][col] =
-                (global_row < N && global_col < N)
-                    ? B[global_row * N + global_col]
+                (global_row < k && global_col < n)
+                    ? B[global_row * n + global_col]
                     : 0.0f;
         }
         __syncthreads();
 
-        for (int k = 0; k < BK; ++k) {
+        for (int kk = 0; kk < BK; ++kk) {
             float a_reg[TM];
             float b_reg[TN];
 
             for (int i = 0; i < TM; ++i) {
-                a_reg[i] = As[ty * TM + i][k];
+                a_reg[i] = As[ty * TM + i][kk];
             }
             for (int j = 0; j < TN; ++j) {
-                b_reg[j] = Bs[k][tx * TN + j];
+                b_reg[j] = Bs[kk][tx * TN + j];
             }
 
             for (int i = 0; i < TM; ++i) {
@@ -142,33 +144,35 @@ __global__ void gemm_register_kernel(const float* A, const float* B, float* C,
 
     for (int i = 0; i < TM; ++i) {
         const int row = row_base + i;
-        if (row >= N) {
+        if (row >= m) {
             continue;
         }
         for (int j = 0; j < TN; ++j) {
             const int col = col_base + j;
-            if (col < N) {
-                C[row * N + col] = c_reg[i][j];
+            if (col < n) {
+                C[row * n + col] = c_reg[i][j];
             }
         }
     }
 }
 
-void launch_gemm_register(const float* a, const float* b, float* c, int N) {
+void launch_gemm_register(const float* a, const float* b, float* c,
+                          int m, int n, int k) {
     const dim3 threads(BN / TN, BM / TM);
-    const dim3 blocks((N + BN - 1) / BN, (N + BM - 1) / BM);
-    gemm_register_kernel<<<blocks, threads>>>(a, b, c, N);
+    const dim3 blocks((n + BN - 1) / BN, (m + BM - 1) / BM);
+    gemm_register_kernel<<<blocks, threads>>>(a, b, c, m, n, k);
 }
 
-void launch_gemm_cublas(const float* a, const float* b, float* c, int N) {
+void launch_gemm_cublas(const float* a, const float* b, float* c,
+                        int m, int n, int k) {
     cublasHandle_t handle;
     cublas_check(cublasCreate(&handle));
     cublas_check(cublasSetMathMode(handle, CUBLAS_PEDANTIC_MATH));
 
     const float alpha = 1.0f;
     const float beta = 0.0f;
-    cublas_check(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, N, N, N,
-                             &alpha, b, N, a, N, &beta, c, N));
+    cublas_check(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, n, m, k,
+                             &alpha, b, n, a, k, &beta, c, n));
     cublas_check(cublasDestroy(handle));
 }
 
@@ -190,19 +194,20 @@ const char* to_string(GemmAlgo algo) {
     return "unknown";
 }
 
-void gemm(const float* a, const float* b, float* c, int N, GemmAlgo algo) {
+void gemm(const float* a, const float* b, float* c,
+          int m, int n, int k, GemmAlgo algo) {
     switch (algo) {
         case GemmAlgo::Naive:
-            launch_gemm_naive(a, b, c, N);
+            launch_gemm_naive(a, b, c, m, n, k);
             return;
         case GemmAlgo::Tiled:
-            launch_gemm_tiled(a, b, c, N);
+            launch_gemm_tiled(a, b, c, m, n, k);
             return;
         case GemmAlgo::Register:
-            launch_gemm_register(a, b, c, N);
+            launch_gemm_register(a, b, c, m, n, k);
             return;
         case GemmAlgo::Cublas:
-            launch_gemm_cublas(a, b, c, N);
+            launch_gemm_cublas(a, b, c, m, n, k);
             return;
     }
 }

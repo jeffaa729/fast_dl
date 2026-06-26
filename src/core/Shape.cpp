@@ -1,8 +1,10 @@
-#include "Shape.hpp"
+#include <dl/core/Shape.hpp>
 
 #include <numeric>
 #include <sstream>
 #include <utility>
+
+namespace dl {
 
 Shape::Shape(std::initializer_list<int64_t> dims) : dims(dims) {}
 
@@ -36,3 +38,5 @@ std::string Shape::str() const {
     out << ")";
     return out.str();
 }
+
+}  // namespace dl

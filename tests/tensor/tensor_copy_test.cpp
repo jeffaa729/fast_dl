@@ -2,20 +2,17 @@
 #include <iostream>
 #include <vector>
 
-#include <dl/core/Device.hpp>
-#include <dl/core/DType.hpp>
-#include <dl/core/Shape.hpp>
-#include <dl/tensor/Tensor.hpp>
+#include <dl/dl.hpp>
 
 int main() {
     const std::vector<float> input = {1.0f, 2.0f, 3.0f, 4.0f};
-    std::vector<float> output(input.size(), 0.0f);
+    dl::Tensor x = dl::Tensor::from_host<float>(
+        input,
+        dl::Shape({4}),
+        dl::Device(dl::DeviceType::CUDA, 0));
 
-    Tensor x(Shape({4}), DType::Float32, Device(DeviceType::CUDA, 0));
-    x.copy_from_host(input.data(), input.size() * sizeof(float));
-
-    Tensor alias = x;
-    alias.copy_to_host(output.data(), output.size() * sizeof(float));
+    dl::Tensor alias = x;
+    const std::vector<float> output = alias.to_host<float>();
 
     bool passed = true;
     for (std::size_t i = 0; i < input.size(); ++i) {

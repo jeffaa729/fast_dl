@@ -3,11 +3,7 @@
 #include <iostream>
 #include <vector>
 
-#include <dl/core/Device.hpp>
-#include <dl/core/DType.hpp>
-#include <dl/core/Shape.hpp>
-#include <dl/ops/Softmax.hpp>
-#include <dl/tensor/Tensor.hpp>
+#include <dl/dl.hpp>
 
 namespace {
 
@@ -49,15 +45,14 @@ int main() {
         1.0f, 3.0f, 2.0f, 0.0f,
     };
 
-    Tensor x(Shape({static_cast<int64_t>(rows), static_cast<int64_t>(cols)}),
-             DType::Float32,
-             Device(DeviceType::CUDA, 0));
-    x.copy_from_host(input.data(), input.size() * sizeof(float));
+    dl::Tensor x = dl::Tensor::from_host<float>(
+        input,
+        dl::Shape({static_cast<int64_t>(rows), static_cast<int64_t>(cols)}),
+        dl::Device(dl::DeviceType::CUDA, 0));
 
-    Tensor y = dl::ops::softmax(x, rows, cols);
+    dl::Tensor y = dl::ops::softmax(x);
 
-    std::vector<float> output(input.size(), 0.0f);
-    y.copy_to_host(output.data(), output.size() * sizeof(float));
+    const std::vector<float> output = y.to_host<float>();
 
     const std::vector<float> expected = softmax_cpu(input, rows, cols);
 

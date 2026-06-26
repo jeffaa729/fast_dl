@@ -6,6 +6,6 @@
 
 namespace dl::ops {
 
-Tensor softmax(const Tensor& input);
+Tensor matmul(const Tensor& a, const Tensor& b);
 
 }  // namespace dl::ops

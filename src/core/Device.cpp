@@ -1,4 +1,6 @@
-#include "Device.hpp"
+#include <dl/core/Device.hpp>
+
+namespace dl {
 
 Device::Device(DeviceType type, int index) : type(type), index(index) {}
 
@@ -16,3 +18,5 @@ std::string Device::str() const {
     }
     return "cpu";
 }
+
+}  // namespace dl

@@ -1,21 +1,13 @@
 #include <dl/tensor/TensorImpl.hpp>
 
+#include <dl/core/CudaUtils.hpp>
+
 #include <cuda_runtime.h>
 
 #include <stdexcept>
-#include <string>
 #include <utility>
 
-namespace {
-
-void check_cuda(cudaError_t status, const char* action) {
-    if (status != cudaSuccess) {
-        throw std::runtime_error(std::string(action) + ": " +
-                                 cudaGetErrorString(status));
-    }
-}
-
-}  // namespace
+namespace dl {
 
 TensorImpl::TensorImpl(const Shape& shape, DType dtype, Device device)
     : shape_(shape), dtype_(dtype), device_(device) {
@@ -81,8 +73,8 @@ void TensorImpl::allocate() {
     if (!device_.is_cuda()) {
         throw std::runtime_error("Tensor currently supports CUDA allocation only");
     }
-    check_cuda(cudaSetDevice(device_.index), "cudaSetDevice failed");
-    check_cuda(cudaMalloc(&data_, nbytes()), "cudaMalloc failed");
+    dl::cuda::check(cudaSetDevice(device_.index), "cudaSetDevice failed");
+    dl::cuda::check(cudaMalloc(&data_, nbytes()), "cudaMalloc failed");
 }
 
 void TensorImpl::release() {
@@ -108,9 +100,9 @@ void TensorImpl::copy_from_host(const void* src, std::size_t bytes) {
         throw std::runtime_error("copy_from_host currently supports CUDA tensors only");
     }
 
-    check_cuda(cudaSetDevice(device_.index), "cudaSetDevice failed");
-    check_cuda(cudaMemcpy(data_, src, bytes, cudaMemcpyHostToDevice),
-               "cudaMemcpy host to device failed");
+    dl::cuda::check(cudaSetDevice(device_.index), "cudaSetDevice failed");
+    dl::cuda::check(cudaMemcpy(data_, src, bytes, cudaMemcpyHostToDevice),
+                    "cudaMemcpy host to device failed");
 }
 
 void TensorImpl::copy_to_host(void* dst, std::size_t bytes) const {
@@ -125,9 +117,9 @@ void TensorImpl::copy_to_host(void* dst, std::size_t bytes) const {
         throw std::runtime_error("copy_to_host currently supports CUDA tensors only");
     }
 
-    check_cuda(cudaSetDevice(device_.index), "cudaSetDevice failed");
-    check_cuda(cudaMemcpy(dst, data_, bytes, cudaMemcpyDeviceToHost),
-               "cudaMemcpy device to host failed");
+    dl::cuda::check(cudaSetDevice(device_.index), "cudaSetDevice failed");
+    dl::cuda::check(cudaMemcpy(dst, data_, bytes, cudaMemcpyDeviceToHost),
+                    "cudaMemcpy device to host failed");
 }
 
 void TensorImpl::copy_from(const TensorImpl& src) {
@@ -139,11 +131,26 @@ void TensorImpl::copy_from(const TensorImpl& src) {
     }
 
     if (src.device().is_cuda() && device_.is_cuda()) {
-        check_cuda(cudaSetDevice(device_.index), "cudaSetDevice failed");
-        check_cuda(cudaMemcpy(data_, src.data(), nbytes(), cudaMemcpyDeviceToDevice),
-                   "cudaMemcpy device to device failed");
+        dl::cuda::check(cudaSetDevice(device_.index), "cudaSetDevice failed");
+        dl::cuda::check(cudaMemcpy(data_, src.data(), nbytes(), cudaMemcpyDeviceToDevice),
+                        "cudaMemcpy device to device failed");
         return;
     }
 
     throw std::runtime_error("copy_from currently supports CUDA to CUDA only");
 }
+
+void TensorImpl::zero_() {
+    if (nbytes() == 0) {
+        return;
+    }
+
+    if (!device_.is_cuda()) {
+        throw std::runtime_error("zero_ currently supports CUDA tensors only");
+    }
+
+    dl::cuda::check(cudaSetDevice(device_.index), "cudaSetDevice failed");
+    dl::cuda::check(cudaMemset(data_, 0, nbytes()), "cudaMemset failed");
+}
+
+}  // namespace dl

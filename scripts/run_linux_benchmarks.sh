@@ -83,7 +83,10 @@ profile_benchmark() {
             local args=(reduction "${REDUCTION_SIZE:-16777216}")
             ;;
         gemm)
-            local args=(gemm "${GEMM_N:-512}")
+            local gemm_m="${GEMM_M:-${GEMM_N:-512}}"
+            local gemm_n="${GEMM_OUT_N:-${GEMM_N:-512}}"
+            local gemm_k="${GEMM_K:-${GEMM_N:-512}}"
+            local args=(gemm "${gemm_m}" "${gemm_n}" "${gemm_k}")
             ;;
         softmax)
             local args=(softmax "${SOFTMAX_ROWS:-4096}" "${SOFTMAX_COLS:-1024}")
@@ -208,8 +211,8 @@ echo "configure : ${BUILD_DIR}"
 cmake -S . -B "${BUILD_DIR}" -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCH}"
 
 echo
-echo "build : tensor_test dl_benchmarks"
-cmake --build "${BUILD_DIR}" --target tensor_test dl_benchmarks
+echo "build : all tests and benchmarks"
+cmake --build "${BUILD_DIR}"
 
 echo
 echo "tests : start"

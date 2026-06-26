@@ -7,6 +7,8 @@
 #include <dl/core/DType.hpp>
 #include <dl/core/Shape.hpp>
 
+namespace dl {
+
 class TensorImpl {
 public:
     TensorImpl(const Shape& shape, DType dtype, Device device);
@@ -31,6 +33,7 @@ public:
     void copy_from_host(const void* src, std::size_t bytes);
     void copy_to_host(void* dst, std::size_t bytes) const;
     void copy_from(const TensorImpl& src);
+    void zero_();
 
 private:
     void* data_ = nullptr;
@@ -41,3 +44,7 @@ private:
     void allocate();
     void release();
 };
+
+}  // namespace dl
+
+using TensorImpl = dl::TensorImpl;
