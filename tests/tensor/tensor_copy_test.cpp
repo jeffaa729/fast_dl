@@ -13,7 +13,9 @@ int main() {
 
     Tensor x(Shape({4}), DType::Float32, Device(DeviceType::CUDA, 0));
     x.copy_from_host(input.data(), input.size() * sizeof(float));
-    x.copy_to_host(output.data(), output.size() * sizeof(float));
+
+    Tensor alias = x;
+    alias.copy_to_host(output.data(), output.size() * sizeof(float));
 
     bool passed = true;
     for (std::size_t i = 0; i < input.size(); ++i) {

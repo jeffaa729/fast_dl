@@ -1,146 +1,72 @@
-#include "Tensor.hpp"
+#include <dl/tensor/Tensor.hpp>
 
-#include <cuda_runtime.h>
+#include <dl/tensor/TensorImpl.hpp>
 
 #include <stdexcept>
-#include <string>
-#include <utility>
 
 namespace {
-void check_cuda(cudaError_t status, const char* action) {
-    if (status != cudaSuccess) {
-        throw std::runtime_error(std::string(action) + ": " + cudaGetErrorString(status));
-    }
+
+const Shape& empty_shape() {
+    static const Shape shape;
+    return shape;
 }
-}
+
+}  // namespace
 
 Tensor::Tensor(const Shape& shape, DType dtype, Device device)
-    : shape_(shape), dtype_(dtype), device_(device) {
-    allocate();
-}
-
-Tensor::~Tensor() {
-    release();
-}
-
-Tensor::Tensor(Tensor&& other) noexcept
-    : data_(other.data_),
-      shape_(std::move(other.shape_)),
-      dtype_(other.dtype_),
-      device_(other.device_) {
-    other.data_ = nullptr;
-}
-
-Tensor& Tensor::operator=(Tensor&& other) noexcept {
-    if (this != &other) {
-        release();
-        data_ = other.data_;
-        shape_ = std::move(other.shape_);
-        dtype_ = other.dtype_;
-        device_ = other.device_;
-        other.data_ = nullptr;
-    }
-    return *this;
-}
+    : impl_(std::make_shared<TensorImpl>(shape, dtype, device)) {}
 
 void* Tensor::data() {
-    return data_;
+    return impl_ ? impl_->data() : nullptr;
 }
 
 const void* Tensor::data() const {
-    return data_;
+    return impl_ ? impl_->data() : nullptr;
 }
 
 const Shape& Tensor::shape() const {
-    return shape_;
+    return impl_ ? impl_->shape() : empty_shape();
 }
 
 DType Tensor::dtype() const {
-    return dtype_;
+    return impl_ ? impl_->dtype() : DType::Float32;
 }
 
 Device Tensor::device() const {
-    return device_;
+    return impl_ ? impl_->device() : Device();
 }
 
 int64_t Tensor::numel() const {
-    return shape_.numel();
+    return impl_ ? impl_->numel() : 0;
 }
 
 std::size_t Tensor::nbytes() const {
-    return static_cast<std::size_t>(numel()) * dtype_size(dtype_);
+    return impl_ ? impl_->nbytes() : 0;
 }
 
 bool Tensor::defined() const {
-    return data_ != nullptr;
-}
-
-void Tensor::allocate() {
-    if (nbytes() == 0) {
-        return;
-    }
-    if (!device_.is_cuda()) {
-        throw std::runtime_error("Tensor currently supports CUDA allocation only");
-    }
-    check_cuda(cudaSetDevice(device_.index), "cudaSetDevice failed");
-    check_cuda(cudaMalloc(&data_, nbytes()), "cudaMalloc failed");
-}
-
-void Tensor::release() {
-    if (data_ == nullptr) {
-        return;
-    }
-    if (device_.is_cuda()) {
-        cudaSetDevice(device_.index);
-        cudaFree(data_);
-    }
-    data_ = nullptr;
+    return impl_ != nullptr && impl_->data() != nullptr;
 }
 
 void Tensor::copy_from_host(const void* src, std::size_t bytes) {
-    if (bytes > nbytes()) {
-        throw std::runtime_error("copy_from_host exceeds tensor size");
+    if (!impl_) {
+        throw std::runtime_error("copy_from_host requires a defined tensor");
     }
-    if (bytes == 0) return;
-
-    if (!device_.is_cuda()) {
-        throw std::runtime_error("copy_from_host currently supports CUDA tensors only");
-    }
-
-    check_cuda(cudaSetDevice(device_.index), "cudaSetDevice failed");
-    check_cuda(cudaMemcpy(data_, src, bytes, cudaMemcpyHostToDevice),
-               "cudaMemcpy host to device failed");
+    impl_->copy_from_host(src, bytes);
 }
 
 void Tensor::copy_to_host(void* dst, std::size_t bytes) const {
-    if (bytes > nbytes()) {
-        throw std::runtime_error("copy_to_host exceeds tensor size");
+    if (!impl_) {
+        throw std::runtime_error("copy_to_host requires a defined tensor");
     }
-    if (bytes == 0) return;
-
-    if (!device_.is_cuda()) {
-        throw std::runtime_error("copy_to_host currently supports CUDA tensors only");
-    }
-
-    check_cuda(cudaSetDevice(device_.index), "cudaSetDevice failed");
-    check_cuda(cudaMemcpy(dst, data_, bytes, cudaMemcpyDeviceToHost),
-               "cudaMemcpy device to host failed");
+    impl_->copy_to_host(dst, bytes);
 }
 
 void Tensor::copy_from(const Tensor& src) {
-    if (src.nbytes() != nbytes()) {
-        throw std::runtime_error("tensor copy size mismatch");
+    if (!impl_ || !src.impl_) {
+        throw std::runtime_error("copy_from requires defined tensors");
     }
-    if (nbytes() == 0) return;
-
-    if (src.device().is_cuda() && device_.is_cuda()) {
-        check_cuda(cudaSetDevice(device_.index), "cudaSetDevice failed");
-        check_cuda(cudaMemcpy(data_, src.data(), nbytes(), cudaMemcpyDeviceToDevice),
-                   "cudaMemcpy device to device failed");
-        return;
-    }
-
-    throw std::runtime_error("copy_from currently supports CUDA to CUDA only");
+    impl_->copy_from(*src.impl_);
 }
 
 void Tensor::copy_to(Tensor& dst) const {

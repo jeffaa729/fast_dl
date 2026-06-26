@@ -27,6 +27,7 @@ add_library(dl_core
     src/core/Shape.cpp
     src/ops/Softmax.cpp
     src/tensor/Tensor.cpp
+    src/tensor/TensorImpl.cpp
 )
 
 add_library(dl_cuda_kernels

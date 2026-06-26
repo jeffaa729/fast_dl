@@ -2,23 +2,26 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 
 #include <dl/core/Device.hpp>
 #include <dl/core/DType.hpp>
 #include <dl/core/Shape.hpp>
+
+class TensorImpl;
 
 class Tensor {
 public:
     Tensor() = default;
     Tensor(const Shape& shape, DType dtype = DType::Float32, Device device = Device());
 
-    ~Tensor();
+    ~Tensor() = default;
 
-    Tensor(const Tensor&) = delete;
-    Tensor& operator=(const Tensor&) = delete;
+    Tensor(const Tensor&) = default;
+    Tensor& operator=(const Tensor&) = default;
 
-    Tensor(Tensor&& other) noexcept;
-    Tensor& operator=(Tensor&& other) noexcept;
+    Tensor(Tensor&& other) noexcept = default;
+    Tensor& operator=(Tensor&& other) noexcept = default;
 
     void* data();
     const void* data() const;
@@ -37,11 +40,5 @@ public:
     void copy_to(Tensor& dst) const;
 
 private:
-    void* data_ = nullptr;
-    Shape shape_;
-    DType dtype_ = DType::Float32;
-    Device device_;
-
-    void allocate();
-    void release();
+    std::shared_ptr<TensorImpl> impl_;
 };
