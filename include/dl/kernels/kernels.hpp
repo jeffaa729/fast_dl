@@ -5,3 +5,4 @@
 #include <dl/kernels/softmax.hpp>
 #include <dl/kernels/transpose.hpp>
 #include <dl/kernels/vector_add.hpp>
+#include <dl/kernels/elementwise.hpp>
