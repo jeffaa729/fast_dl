@@ -1,6 +1,8 @@
-#include "DType.hpp"
+#include <dl/core/DType.hpp>
 
 #include <stdexcept>
+
+namespace dl {
 
 std::size_t dtype_size(DType dtype) {
     switch (dtype) {
@@ -33,3 +35,5 @@ std::string dtype_name(DType dtype) {
     }
     throw std::invalid_argument("unknown dtype");
 }
+
+}  // namespace dl

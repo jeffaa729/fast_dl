@@ -36,7 +36,7 @@ __global__ void reduction_address_kernel(const float* input, float* output) {
     const std::size_t tid = threadIdx.x;
     sdata[tid] = input[blockIdx.x * 1024 + tid];
     __syncthreads();
-
+    
     for (int s = blockDim.x / 2; s > 0; s >>= 1) {
         if (tid < s) {                          // focus on low thread id
             sdata[tid] += sdata[tid + s];

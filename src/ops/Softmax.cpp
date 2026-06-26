@@ -1,28 +1,27 @@
-#include "Softmax.hpp"
+#include <dl/ops/Softmax.hpp>
 
-#include "softmax.hpp"
+#include <dl/core/CudaUtils.hpp>
+#include <dl/kernels/softmax.hpp>
 
 #include <cuda_runtime.h>
 
+#include <cstdint>
 #include <stdexcept>
-#include <string>
-
-namespace {
-
-void check_cuda(cudaError_t status, const char* action) {
-    if (status != cudaSuccess) {
-        throw std::runtime_error(std::string(action) + ": " +
-                                 cudaGetErrorString(status));
-    }
-}
-
-}  // namespace
 
 namespace dl::ops {
 
-Tensor softmax(const Tensor& input,
-               std::size_t rows,
-               std::size_t cols) {
+Tensor softmax(const Tensor& input) {
+    
+    if (!input.defined()) {
+        throw std::runtime_error("softmax input tensor is not defined");
+    }   
+
+    if(input.shape().rank() != 2) {
+        throw std::runtime_error("softmax input tensor must be 2D");
+    }
+
+    std::size_t rows = static_cast<std::size_t>(input.shape()[0]);
+    std::size_t cols = static_cast<std::size_t>(input.shape()[1]);
     if (!input.defined()) {
         throw std::runtime_error("softmax input tensor is not defined");
     }
@@ -45,14 +44,14 @@ Tensor softmax(const Tensor& input,
 
     Tensor output(input.shape(), input.dtype(), input.device());
 
-    check_cuda(cudaSetDevice(input.device().index), "cudaSetDevice failed");
+    dl::cuda::check(cudaSetDevice(input.device().index), "cudaSetDevice failed");
     dl::kernels::softmax(
         static_cast<const float*>(input.data()),
         static_cast<float*>(output.data()),
         rows,
         cols,
         dl::kernels::SoftmaxAlgo::WarpShuffleRegCache);
-    check_cuda(cudaGetLastError(), "softmax kernel launch failed");
+    dl::cuda::check(cudaGetLastError(), "softmax kernel launch failed");
 
     return output;
 }
