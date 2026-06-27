@@ -1,5 +1,7 @@
 #include <dl/ops/Matmul.hpp>
 
+#include <dl/autograd/GradMode.hpp>
+#include <dl/autograd/MatmulOperator.hpp>
 #include <dl/core/CudaUtils.hpp>
 #include <dl/kernels/gemm.hpp>
 #include <dl/ops/OpUtils.hpp>
@@ -7,6 +9,7 @@
 #include <cuda_runtime.h>
 
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 
 namespace dl::ops {
@@ -41,6 +44,13 @@ Tensor matmul(const Tensor& a, const Tensor& b) {
         k,
         dl::kernels::GemmAlgo::Cublas);
     dl::cuda::check(cudaGetLastError(), "matmul kernel launch failed");
+    if (dl::autograd::is_grad_enabled() &&
+        (a.requires_grad() || b.requires_grad())) {
+        auto op = std::make_shared<dl::autograd::MatmulOperator>();
+        op->setup_computation_graph({a, b}, {output});
+        output.set_requires_grad(true);
+        output.set_creator(op);
+    }
     return output;
 }
 
