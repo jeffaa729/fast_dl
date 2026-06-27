@@ -13,6 +13,9 @@
 namespace dl {
 
 class TensorImpl;
+namespace autograd {
+class Operator;
+}
 
 template <typename T>
 DType tensor_dtype();
@@ -55,6 +58,7 @@ public:
 
     static Tensor empty_like(const Tensor& other);
     static Tensor zeros_like(const Tensor& other);
+    static Tensor ones_like(const Tensor& other);
 
 
     template <typename T>
@@ -88,6 +92,23 @@ public:
 
     template <typename T>
     std::vector<T> to_host() const;
+    
+    std::shared_ptr<TensorImpl> impl() const;
+
+    bool requires_grad() const;
+    void set_requires_grad(bool value);
+
+    Tensor grad() const;
+    void zero_grad();
+
+    void backward();
+
+    int generation() const;
+
+    void set_creator(std::shared_ptr<dl::autograd::Operator> creator);
+    std::shared_ptr<dl::autograd::Operator> creator() const;
+
+    void accumulate_grad(const Tensor& grad);
 
 private:
     std::shared_ptr<TensorImpl> impl_;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <dl/autograd/GradMode.hpp>
 #include <dl/core/Device.hpp>
 #include <dl/core/DType.hpp>
 #include <dl/core/Shape.hpp>

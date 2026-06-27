@@ -1,5 +1,7 @@
 #include <dl/tensor/Tensor.hpp>
 
+#include <dl/autograd/GradMode.hpp>
+#include <dl/autograd/Operator.hpp>
 #include <dl/core/CudaUtils.hpp>
 #include <dl/kernels/random.hpp>
 #include <dl/tensor/TensorImpl.hpp>
@@ -7,7 +9,9 @@
 #include <cuda_runtime.h>
 
 #include <cmath>
+#include <queue>
 #include <stdexcept>
+#include <utility>
 
 namespace dl {
 
@@ -118,6 +122,18 @@ Tensor Tensor::zeros_like(const Tensor& other) {
     return tensor;
 }
 
+Tensor Tensor::ones_like(const Tensor& other) {
+    if (!other.defined()) {
+        throw std::runtime_error("ones_like requires a defined tensor");
+    }
+    if (other.dtype() != DType::Float32) {
+        throw std::runtime_error("ones_like currently supports Float32 only");
+    }
+
+    std::vector<float> values(static_cast<std::size_t>(other.numel()), 1.0f);
+    return Tensor::from_host<float>(values, other.shape(), other.device());
+}
+
 void* Tensor::data() {
     return impl_ ? impl_->data() : nullptr;
 }
@@ -180,6 +196,106 @@ void Tensor::zero_() {
         throw std::runtime_error("zero_ requires a defined tensor");
     }
     impl_->zero_();
+}
+
+std::shared_ptr<TensorImpl> Tensor::impl() const {
+    return impl_;
+}
+
+bool Tensor::requires_grad() const {
+    return impl_ ? impl_->requires_grad() : false;
+}
+
+void Tensor::set_requires_grad(bool value) {
+    if (!impl_) {
+        throw std::runtime_error("set_requires_grad requires a defined tensor");
+    }
+    impl_->set_requires_grad(value);
+}
+
+Tensor Tensor::grad() const {
+    return impl_ ? impl_->grad() : Tensor();
+}
+
+void Tensor::zero_grad() {
+    if (!impl_) {
+        throw std::runtime_error("zero_grad requires a defined tensor");
+    }
+    impl_->zero_grad();
+}
+
+int Tensor::generation() const {
+    return impl_ ? impl_->generation() : 0;
+}
+
+void Tensor::set_creator(std::shared_ptr<dl::autograd::Operator> creator) {
+    if (!impl_) {
+        throw std::runtime_error("set_creator requires a defined tensor");
+    }
+    impl_->set_creator(std::move(creator));
+}
+
+std::shared_ptr<dl::autograd::Operator> Tensor::creator() const {
+    return impl_ ? impl_->creator() : nullptr;
+}
+
+void Tensor::accumulate_grad(const Tensor& grad) {
+    if (!impl_) {
+        throw std::runtime_error("accumulate_grad requires a defined tensor");
+    }
+    impl_->accumulate_grad(grad);
+}
+
+void Tensor::backward() {
+    if (!defined()) {
+        throw std::runtime_error("backward requires a defined tensor");
+    }
+    if (!requires_grad()) {
+        throw std::runtime_error("backward called on a tensor that does not require gradients");
+    }
+
+    dl::autograd::NoGradGuard no_grad;
+    accumulate_grad(Tensor::ones_like(*this));
+
+    auto root_creator = creator();
+    if (!root_creator) {
+        return;  // No creator, so this is a leaf tensor
+    }
+    using OperatorPtr = std::shared_ptr<dl::autograd::Operator>;
+
+    auto cmp = [](const OperatorPtr& a, const OperatorPtr& b) {
+        return a->generation() < b->generation();
+    };
+
+    std::priority_queue<OperatorPtr, std::vector<OperatorPtr>, decltype(cmp)> queue(cmp);
+    queue.push(root_creator);
+
+    while (!queue.empty()) {
+        auto op = queue.top();
+        queue.pop();
+
+        std::vector<Tensor> grad_outputs = op->grad_outputs();
+        std::vector<Tensor> grad_inputs = op->backward(grad_outputs);
+
+        const std::vector<Tensor>& inputs = op->inputs();
+        if (grad_inputs.size() != inputs.size()) {
+            throw std::runtime_error("backward returned wrong number of gradients");
+        }
+
+        for (std::size_t i = 0; i < inputs.size(); ++i) {
+            Tensor input = inputs[i];
+
+            if (!input.requires_grad()) {
+                continue;
+            }
+
+            input.accumulate_grad(grad_inputs[i]);
+
+            if (input.creator()) {
+                queue.push(input.creator());
+            }
+        }
+    }
 }
 
 }  // namespace dl

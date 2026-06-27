@@ -25,12 +25,31 @@ public:
         return forward(input);
     }
 
+    void train() {
+        training_ = true;
+        for (Module* child : children_) {
+            child->train();
+        }
+    }
+
+    void eval() {
+        training_ = false;
+        for (Module* child : children_) {
+            child->eval();
+        }
+    }
+
+    bool is_training() const {
+        return training_;
+    }
+
 protected:
     void register_module(Module& module) {
         children_.push_back(&module);
     }
 
 private:
+    bool training_ = true;
     std::vector<Module*> children_;
 };
 

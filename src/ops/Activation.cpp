@@ -1,10 +1,14 @@
 #include <dl/ops/Activation.hpp>
 
+#include <dl/autograd/GradMode.hpp>
+#include <dl/autograd/ReLUOperator.hpp>
 #include <dl/core/CudaUtils.hpp>
 #include <dl/kernels/activation.hpp>
 #include <dl/ops/OpUtils.hpp>
 
 #include <cuda_runtime.h>
+
+#include <memory>
 
 namespace dl::ops {
 
@@ -30,7 +34,14 @@ Tensor run_activation(const Tensor& input, dl::kernels::ActivationOp kernel_op,
 }  // namespace
 
 Tensor relu(const Tensor& input) {
-    return run_activation(input, dl::kernels::ActivationOp::ReLU, "relu");
+    Tensor output = run_activation(input, dl::kernels::ActivationOp::ReLU, "relu");
+    if (dl::autograd::is_grad_enabled() && input.requires_grad()) {
+        auto op = std::make_shared<dl::autograd::ReLUOperator>();
+        op->setup_computation_graph({input}, {output});
+        output.set_requires_grad(true);
+        output.set_creator(op);
+    }
+    return output;
 }
 
 Tensor leaky_relu(const Tensor& input, float alpha) {

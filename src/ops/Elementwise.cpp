@@ -1,5 +1,10 @@
 #include <dl/ops/Elementwise.hpp>
 
+#include <dl/autograd/AddOperator.hpp>
+#include <dl/autograd/DivOperator.hpp>
+#include <dl/autograd/GradMode.hpp>
+#include <dl/autograd/MulOperator.hpp>
+#include <dl/autograd/SubOperator.hpp>
 #include <dl/core/CudaUtils.hpp>
 #include <dl/kernels/elementwise.hpp>
 #include <dl/ops/OpUtils.hpp>
@@ -7,6 +12,7 @@
 #include <cuda_runtime.h>
 
 #include <cstdint>
+#include <memory>
 #include <string>
 
 namespace dl {
@@ -52,19 +58,51 @@ Tensor run_elementwise(const Tensor& a, const Tensor& b,
 }  // namespace
 
 Tensor add(const Tensor& a, const Tensor& b) {
-    return run_elementwise(a, b, dl::kernels::ElementwiseOp::Add, "add");
+    Tensor output = run_elementwise(a, b, dl::kernels::ElementwiseOp::Add, "add");
+    if (dl::autograd::is_grad_enabled() &&
+        (a.requires_grad() || b.requires_grad())) {
+        auto op = std::make_shared<dl::autograd::AddOperator>();
+        op->setup_computation_graph({a, b}, {output});
+        output.set_requires_grad(true);
+        output.set_creator(op);
+    }
+    return output;
 }
 
 Tensor sub(const Tensor& a, const Tensor& b) {
-    return run_elementwise(a, b, dl::kernels::ElementwiseOp::Sub, "sub");
+    Tensor output = run_elementwise(a, b, dl::kernels::ElementwiseOp::Sub, "sub");
+    if (dl::autograd::is_grad_enabled() &&
+        (a.requires_grad() || b.requires_grad())) {
+        auto op = std::make_shared<dl::autograd::SubOperator>();
+        op->setup_computation_graph({a, b}, {output});
+        output.set_requires_grad(true);
+        output.set_creator(op);
+    }
+    return output;
 }
 
 Tensor mul(const Tensor& a, const Tensor& b) {
-    return run_elementwise(a, b, dl::kernels::ElementwiseOp::Mul, "mul");
+    Tensor output = run_elementwise(a, b, dl::kernels::ElementwiseOp::Mul, "mul");
+    if (dl::autograd::is_grad_enabled() &&
+        (a.requires_grad() || b.requires_grad())) {
+        auto op = std::make_shared<dl::autograd::MulOperator>();
+        op->setup_computation_graph({a, b}, {output});
+        output.set_requires_grad(true);
+        output.set_creator(op);
+    }
+    return output;
 }
 
 Tensor div(const Tensor& a, const Tensor& b) {
-    return run_elementwise(a, b, dl::kernels::ElementwiseOp::Div, "div");
+    Tensor output = run_elementwise(a, b, dl::kernels::ElementwiseOp::Div, "div");
+    if (dl::autograd::is_grad_enabled() &&
+        (a.requires_grad() || b.requires_grad())) {
+        auto op = std::make_shared<dl::autograd::DivOperator>();
+        op->setup_computation_graph({a, b}, {output});
+        output.set_requires_grad(true);
+        output.set_creator(op);
+    }
+    return output;
 }
 
 }  // namespace dl::ops

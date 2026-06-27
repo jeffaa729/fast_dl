@@ -16,6 +16,25 @@ namespace {
         relu_kernel<<<numBlocks, blockSize>>>(input, output, n);
     }
 
+    __global__ void relu_backward_kernel(const float* input,
+                                         const float* grad_output,
+                                         float* grad_input,
+                                         int n) {
+        const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+        if (idx < n) {
+            grad_input[idx] = input[idx] > 0.0f ? grad_output[idx] : 0.0f;
+        }
+    }
+
+    void launch_relu_backward_kernel(const float* input,
+                                     const float* grad_output,
+                                     float* grad_input,
+                                     int n) {
+        const int blockSize = 256;
+        const int numBlocks = (n + blockSize - 1) / blockSize;
+        relu_backward_kernel<<<numBlocks, blockSize>>>(input, grad_output, grad_input, n);
+    }
+
     __global__ void sigmoid_kernel(const float* input, float* output, int n) {
         const int idx = blockIdx.x * blockDim.x + threadIdx.x;
         if (idx < n) {
@@ -91,5 +110,10 @@ namespace dl::kernels {
             default:
                 throw std::runtime_error("Unsupported activation type");
         }
+    }
+
+    void relu_backward(const float* input, const float* grad_output,
+                       float* grad_input, int n) {
+        launch_relu_backward_kernel(input, grad_output, grad_input, n);
     }
 }  // namespace dl::kernels
