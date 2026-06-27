@@ -66,7 +66,7 @@ int main() {
         passed = false;
     }
 
-    std::cout << "mlp_backward_demo : "
+    std::cout << "mlp_backward_test : "
               << (passed ? "passed" : "not passed") << "\n";
 
     return passed ? 0 : 1;

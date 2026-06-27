@@ -30,3 +30,4 @@ bin/
 /ncu_reports
 mnist_profile.sqlite
 mnist_profile.nsys-rep
+/benchmark_results

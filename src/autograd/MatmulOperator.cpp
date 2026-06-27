@@ -41,8 +41,7 @@ std::vector<Tensor> MatmulOperator::backward(
         k,
         n,
         false,
-        true,
-        dl::kernels::GemmAlgo::Cublas);
+        true);
 
     dl::kernels::gemm(
         static_cast<const float*>(a.data()),
@@ -52,8 +51,7 @@ std::vector<Tensor> MatmulOperator::backward(
         n,
         m,
         true,
-        false,
-        dl::kernels::GemmAlgo::Cublas);
+        false);
 
     dl::cuda::check(cudaGetLastError(), "matmul backward kernel launch failed");
 

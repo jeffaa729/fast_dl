@@ -18,12 +18,12 @@ namespace {
 
 Tensor add_row_bias(const Tensor& input, const Tensor& bias) {
     Tensor output = Tensor::empty_like(input);
-    output.copy_from(input);
 
     dl::cuda::check(cudaSetDevice(input.device().index), "cudaSetDevice failed");
     dl::kernels::add_row_bias(
-        static_cast<float*>(output.data()),
+        static_cast<const float*>(input.data()),
         static_cast<const float*>(bias.data()),
+        static_cast<float*>(output.data()),
         static_cast<int>(output.shape()[0]),
         static_cast<int>(output.shape()[1]));
     dl::cuda::check(cudaGetLastError(), "linear bias kernel launch failed");

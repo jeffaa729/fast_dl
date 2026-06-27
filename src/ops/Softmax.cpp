@@ -34,8 +34,7 @@ Tensor softmax(const Tensor& input) {
         static_cast<const float*>(input.data()),
         static_cast<float*>(output.data()),
         rows,
-        cols,
-        dl::kernels::SoftmaxAlgo::WarpShuffleRegCache);
+        cols);
     dl::cuda::check(cudaGetLastError(), "softmax kernel launch failed");
 
     return output;

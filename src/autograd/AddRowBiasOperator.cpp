@@ -24,9 +24,6 @@ std::vector<Tensor> AddRowBiasOperator::backward(
     const Tensor& bias = op_inputs[1];
     const Tensor& grad_output = grad_outputs[0];
 
-    Tensor grad_input(grad_output.shape(), grad_output.dtype(), grad_output.device());
-    grad_input.copy_from(grad_output);
-
     Tensor grad_bias(bias.shape(), bias.dtype(), bias.device());
     const int rows = static_cast<int>(input.shape()[0]);
     const int cols = static_cast<int>(input.shape()[1]);
@@ -39,7 +36,7 @@ std::vector<Tensor> AddRowBiasOperator::backward(
         cols);
     dl::cuda::check(cudaGetLastError(), "sum rows kernel launch failed");
 
-    return {grad_input, grad_bias};
+    return {grad_output, grad_bias};
 }
 
 }  // namespace dl::autograd

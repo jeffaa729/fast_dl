@@ -41,8 +41,7 @@ Tensor matmul(const Tensor& a, const Tensor& b) {
         static_cast<float*>(output.data()),
         m,
         n,
-        k,
-        dl::kernels::GemmAlgo::Cublas);
+        k);
     dl::cuda::check(cudaGetLastError(), "matmul kernel launch failed");
     if (dl::autograd::is_grad_enabled() &&
         (a.requires_grad() || b.requires_grad())) {

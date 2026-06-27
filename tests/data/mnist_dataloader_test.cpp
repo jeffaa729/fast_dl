@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
 
-#include "mnist/MnistDataLoader.hpp"
+#include "../demo/mnist/MnistDataLoader.hpp"
 
 int main() {
     bool passed = true;
@@ -49,7 +49,7 @@ int main() {
         passed = false;
     }
 
-    std::cout << "mnist_dataloader_demo : "
+    std::cout << "mnist_dataloader_test : "
               << (passed ? "passed" : "not passed") << "\n";
 
     return passed ? 0 : 1;

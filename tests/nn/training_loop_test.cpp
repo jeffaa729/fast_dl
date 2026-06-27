@@ -102,7 +102,7 @@ int main() {
         passed = false;
     }
 
-    std::cout << "tiny_training_loop_demo : "
+    std::cout << "training_loop_test : "
               << (passed ? "passed" : "not passed") << "\n";
 
     return passed ? 0 : 1;
