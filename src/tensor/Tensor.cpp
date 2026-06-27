@@ -1,7 +1,12 @@
 #include <dl/tensor/Tensor.hpp>
 
+#include <dl/core/CudaUtils.hpp>
+#include <dl/kernels/random.hpp>
 #include <dl/tensor/TensorImpl.hpp>
 
+#include <cuda_runtime.h>
+
+#include <cmath>
 #include <stdexcept>
 
 namespace dl {
@@ -27,6 +32,78 @@ Tensor Tensor::zeros(const Shape& shape, DType dtype, Device device) {
     tensor.zero_();
     return tensor;
 }
+
+Tensor Tensor::randn(Shape shape, DType dtype, Device device, float mean, float stddev, uint64_t seed) {
+    if (dtype != DType::Float32) {
+        throw std::runtime_error("Tensor::randn currently supports Float32 only");
+    }
+
+    if (!device.is_cuda()) {
+        throw std::runtime_error("Tensor::randn currently supports CUDA only");
+    }
+
+    Tensor out(shape, dtype, device);
+
+    dl::cuda::check(cudaSetDevice(device.index), "cudaSetDevice failed");
+
+    dl::kernels::normal_float32(
+        static_cast<float*>(out.data()),
+        out.numel(),
+        mean,
+        stddev,
+        seed);
+
+    dl::cuda::check(cudaGetLastError(), "randn kernel launch failed");
+
+    return out;
+}
+
+Tensor Tensor::uniform(Shape shape, DType dtype, Device device, float low, float high, uint64_t seed) {
+    if (dtype != DType::Float32) {
+        throw std::runtime_error("Tensor::uniform currently supports Float32 only");
+    }
+
+    if (!device.is_cuda()) {
+        throw std::runtime_error("Tensor::uniform currently supports CUDA only");
+    }
+
+    Tensor out(shape, dtype, device);
+
+    dl::cuda::check(cudaSetDevice(device.index), "cudaSetDevice failed");
+
+    dl::kernels::uniform_float32(
+        static_cast<float*>(out.data()),
+        out.numel(),
+        low,
+        high,
+        seed);
+
+    dl::cuda::check(cudaGetLastError(), "uniform kernel launch failed");
+
+    return out;
+}
+
+Tensor Tensor::xavier_uniform(Shape shape, DType dtype, Device device, uint64_t seed) {
+    if (shape.rank() < 2) {
+        throw std::runtime_error("Tensor::xavier_uniform requires rank >= 2");
+    }
+
+    const float fan_in = static_cast<float>(shape[shape.rank() - 2]);
+    const float fan_out = static_cast<float>(shape[shape.rank() - 1]);
+    const float limit = std::sqrt(6.0f / (fan_in + fan_out));
+    return Tensor::uniform(shape, dtype, device, -limit, limit, seed);
+}
+
+Tensor Tensor::kaiming_uniform(Shape shape, DType dtype, Device device, uint64_t seed) {
+    if (shape.rank() < 2) {
+        throw std::runtime_error("Tensor::kaiming_uniform requires rank >= 2");
+    }
+
+    const float fan_in = static_cast<float>(shape[shape.rank() - 2]);
+    const float limit = std::sqrt(6.0f / fan_in);
+    return Tensor::uniform(shape, dtype, device, -limit, limit, seed);
+}
+
 
 Tensor Tensor::empty_like(const Tensor& other) {
     if (!other.defined()) {

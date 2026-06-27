@@ -1,8 +1,11 @@
 #include <dl/ops/Linear.hpp>
 
-#include <dl/ops/Elementwise.hpp>
+#include <dl/core/CudaUtils.hpp>
+#include <dl/kernels/bias.hpp>
 #include <dl/ops/Matmul.hpp>
 #include <dl/ops/OpUtils.hpp>
+
+#include <cuda_runtime.h>
 
 #include <stdexcept>
 
@@ -14,7 +17,7 @@ Tensor linear(const Tensor& input, const Tensor& weight, const Tensor& bias) {
     check_defined(bias, "linear", "bias");
     check_rank(input, 2, "linear", "input");
     check_rank(weight, 2, "linear", "weight");
-    check_rank(bias, 2, "linear", "bias");
+    check_rank(bias, 1, "linear", "bias");
     check_float32(input, "linear", "input");
     check_same_dtype(input, weight, "linear", "input", "weight");
     check_same_dtype(input, bias, "linear", "input", "bias");
@@ -28,11 +31,19 @@ Tensor linear(const Tensor& input, const Tensor& weight, const Tensor& bias) {
         throw std::runtime_error("linear input and weight tensors have incompatible shapes");
     }
 
-    if (input.shape()[0] != bias.shape()[0] || weight.shape()[1] != bias.shape()[1]) {
-        throw std::runtime_error("linear bias shape must match output shape");
+    if (weight.shape()[1] != bias.shape()[0]) {
+        throw std::runtime_error("linear bias shape must be [out_features]");
     }
 
-    return matmul(input, weight) + bias;
+    Tensor output = matmul(input, weight);
+    dl::cuda::check(cudaSetDevice(input.device().index), "cudaSetDevice failed");
+    dl::kernels::add_row_bias(
+        static_cast<float*>(output.data()),
+        static_cast<const float*>(bias.data()),
+        static_cast<int>(output.shape()[0]),
+        static_cast<int>(output.shape()[1]));
+    dl::cuda::check(cudaGetLastError(), "linear bias kernel launch failed");
+    return output;
 }
 
 }  // namespace dl::ops

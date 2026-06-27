@@ -21,8 +21,7 @@ std::vector<float> linear_cpu(const std::vector<float>& input,
                 sum += input[row * in_features + k] *
                        weight[k * out_features + col];
             }
-            output[row * out_features + col] =
-                sum + bias[row * out_features + col];
+            output[row * out_features + col] = sum + bias[col];
         }
     }
 
@@ -51,7 +50,6 @@ int main() {
     };
     const std::vector<float> bias = {
         0.5f, 1.0f,
-        1.5f, 2.0f,
     };
 
     dl::Tensor x = dl::Tensor::from_host<float>(
@@ -64,7 +62,7 @@ int main() {
         dl::Device(dl::DeviceType::CUDA, 0));
     dl::Tensor b = dl::Tensor::from_host<float>(
         bias,
-        dl::Shape({static_cast<int64_t>(batch), static_cast<int64_t>(out_features)}),
+        dl::Shape({static_cast<int64_t>(out_features)}),
         dl::Device(dl::DeviceType::CUDA, 0));
 
     dl::Tensor y = dl::ops::linear(x, w, b);

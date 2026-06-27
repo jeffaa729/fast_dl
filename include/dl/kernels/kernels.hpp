@@ -7,5 +7,7 @@
 #include <dl/kernels/vector_add.hpp>
 #include <dl/kernels/elementwise.hpp>
 #include <dl/kernels/activation.hpp>
+#include <dl/kernels/bias.hpp>
 #include <dl/kernels/cross_entropy.hpp>
 #include <dl/kernels/layernorm.hpp>
+#include <dl/kernels/random.hpp>
