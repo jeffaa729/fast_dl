@@ -40,6 +40,7 @@ add_library(dl_core
 
 add_library(dl_cuda_kernels
     src/kernels/cuda/activation.cu
+    src/kernels/cuda/bias.cu
     src/kernels/cuda/cross_entropy.cu
     src/kernels/cuda/elementwise.cu
     src/kernels/cuda/gemm.cu
