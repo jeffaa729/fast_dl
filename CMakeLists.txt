@@ -22,6 +22,11 @@ option(DL_BUILD_BENCHMARKS "Build CUDA benchmark executable" ON)
 find_package(CUDAToolkit REQUIRED)
 
 add_library(dl_core
+    src/autograd/AddOperator.cpp
+    src/autograd/GradMode.cpp
+    src/autograd/MulOperator.cpp
+    src/autograd/Operator.cpp
+    src/autograd/SubOperator.cpp
     src/core/CudaUtils.cpp
     src/core/Device.cpp
     src/core/DType.cpp
@@ -144,7 +149,19 @@ if(DL_BUILD_TESTS)
     add_executable(module_mode_test tests/nn/module_mode_test.cpp)
     target_link_libraries(module_mode_test PRIVATE dl_core)
 
-    foreach(test_name IN ITEMS tensor_test tensor_copy_test tensor_uniform_test tensor_randn_test softmax_tensor_test matmul_tensor_test elementwise_tensor_test activation_tensor_test linear_tensor_test cross_entropy_tensor_test layernorm_tensor_test linear_module_test linear_init_test linear_kaiming_init_test relu_module_test sequential_module_test custom_module_test module_mode_test)
+    add_executable(autograd_add_test tests/autograd/autograd_add_test.cpp)
+    target_link_libraries(autograd_add_test PRIVATE dl_core)
+
+    add_executable(no_grad_guard_test tests/autograd/no_grad_guard_test.cpp)
+    target_link_libraries(no_grad_guard_test PRIVATE dl_core)
+
+    add_executable(autograd_sub_test tests/autograd/autograd_sub_test.cpp)
+    target_link_libraries(autograd_sub_test PRIVATE dl_core)
+
+    add_executable(autograd_mul_test tests/autograd/autograd_mul_test.cpp)
+    target_link_libraries(autograd_mul_test PRIVATE dl_core)
+
+    foreach(test_name IN ITEMS tensor_test tensor_copy_test tensor_uniform_test tensor_randn_test softmax_tensor_test matmul_tensor_test elementwise_tensor_test activation_tensor_test linear_tensor_test cross_entropy_tensor_test layernorm_tensor_test linear_module_test linear_init_test linear_kaiming_init_test relu_module_test sequential_module_test custom_module_test module_mode_test autograd_add_test no_grad_guard_test autograd_sub_test autograd_mul_test)
         add_test(NAME ${test_name} COMMAND ${test_name})
         set_tests_properties(${test_name} PROPERTIES
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")

@@ -6,6 +6,7 @@
 
 #include <stdexcept>
 #include <utility>
+#include <dl/ops/Elementwise.hpp>
 
 namespace dl {
 
@@ -151,6 +152,19 @@ void TensorImpl::zero_() {
 
     dl::cuda::check(cudaSetDevice(device_.index), "cudaSetDevice failed");
     dl::cuda::check(cudaMemset(data_, 0, nbytes()), "cudaMemset failed");
+}
+
+void TensorImpl::accumulate_grad(const Tensor& grad) {
+    if (!grad.defined()) {
+        throw std::runtime_error("accumulate_grad requires a defined tensor");
+    }
+
+    if (!grad_.defined()) {
+        grad_ = Tensor(grad.shape(), grad.dtype(), grad.device());
+        grad_.copy_from(grad);
+    } else {
+        grad_ = dl::ops::add(grad_, grad);
+    }
 }
 
 }  // namespace dl
