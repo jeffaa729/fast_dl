@@ -26,6 +26,7 @@ add_library(dl_core
     src/core/Device.cpp
     src/core/DType.cpp
     src/core/Shape.cpp
+    src/ops/Activation.cpp
     src/ops/Elementwise.cpp
     src/ops/Softmax.cpp
     src/tensor/Tensor.cpp
@@ -34,6 +35,7 @@ add_library(dl_core
 )
 
 add_library(dl_cuda_kernels
+    src/kernels/cuda/activation.cu
     src/kernels/cuda/elementwise.cu
     src/kernels/cuda/gemm.cu
     src/kernels/cuda/reduction.cu
@@ -92,7 +94,10 @@ if(DL_BUILD_TESTS)
     add_executable(elementwise_tensor_test tests/tensor/elementwise_tensor_test.cpp)
     target_link_libraries(elementwise_tensor_test PRIVATE dl_core)
 
-    foreach(test_name IN ITEMS tensor_test tensor_copy_test softmax_tensor_test matmul_tensor_test elementwise_tensor_test)
+    add_executable(activation_tensor_test tests/tensor/activation_tensor_test.cpp)
+    target_link_libraries(activation_tensor_test PRIVATE dl_core)
+
+    foreach(test_name IN ITEMS tensor_test tensor_copy_test softmax_tensor_test matmul_tensor_test elementwise_tensor_test activation_tensor_test)
         add_test(NAME ${test_name} COMMAND ${test_name})
         set_tests_properties(${test_name} PROPERTIES
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
