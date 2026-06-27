@@ -71,15 +71,20 @@ public:
             throw std::runtime_error("MNIST dataloader has no batch left");
         }
 
+        return make_batch(cursor_);
+    }
+
+private:
+    MnistBatch make_batch(std::size_t start) {
         const std::size_t current_batch =
-            std::min(batch_size_, image_count_ - cursor_);
+            std::min(batch_size_, image_count_ - start);
         const std::size_t pixels = image_size();
 
         std::vector<float> batch_images(current_batch * pixels, 0.0f);
         std::vector<int64_t> batch_labels(current_batch, 0);
 
         for (std::size_t row = 0; row < current_batch; ++row) {
-            const std::size_t source_image = cursor_ + row;
+            const std::size_t source_image = start + row;
             const std::size_t source_offset = source_image * pixels;
             const std::size_t batch_offset = row * pixels;
 
@@ -90,7 +95,7 @@ public:
             batch_labels[row] = labels_[source_image];
         }
 
-        cursor_ += current_batch;
+        cursor_ = start + current_batch;
 
         return {
             dl::Tensor::from_host<float>(
@@ -106,7 +111,6 @@ public:
         };
     }
 
-private:
     static uint32_t read_u32_be(std::ifstream& file) {
         unsigned char bytes[4] = {0, 0, 0, 0};
         file.read(reinterpret_cast<char*>(bytes), sizeof(bytes));

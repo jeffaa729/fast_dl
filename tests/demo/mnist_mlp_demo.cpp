@@ -16,10 +16,10 @@ namespace {
 
 class MnistMLP : public dl::nn::Module {
 public:
-    explicit MnistMLP(const dl::Device& device)
-        : fc1_(784, 128, device),
+    MnistMLP(const dl::Device& device, dl::nn::LinearInit init)
+        : fc1_(784, 128, device, init),
           relu_(),
-          fc2_(128, 10, device) {
+          fc2_(128, 10, device, init) {
         register_module(fc1_);
         register_module(relu_);
         register_module(fc2_);
@@ -50,6 +50,16 @@ int env_int(const char* name, int default_value) {
     return parsed > 0 ? parsed : default_value;
 }
 
+int env_non_negative_int(const char* name, int default_value) {
+    const char* value = std::getenv(name);
+    if (value == nullptr) {
+        return default_value;
+    }
+
+    const int parsed = std::atoi(value);
+    return parsed >= 0 ? parsed : default_value;
+}
+
 float env_float(const char* name, float default_value) {
     const char* value = std::getenv(name);
     if (value == nullptr) {
@@ -58,6 +68,29 @@ float env_float(const char* name, float default_value) {
 
     const float parsed = std::strtof(value, nullptr);
     return parsed > 0.0f ? parsed : default_value;
+}
+
+dl::nn::LinearInit env_linear_init() {
+    const char* value = std::getenv("MNIST_LINEAR_INIT");
+    if (value == nullptr) {
+        return dl::nn::LinearInit::KaimingUniform;
+    }
+
+    const std::string name(value);
+    if (name == "xavier") {
+        return dl::nn::LinearInit::XavierUniform;
+    }
+    return dl::nn::LinearInit::KaimingUniform;
+}
+
+const char* linear_init_name(dl::nn::LinearInit init) {
+    switch (init) {
+        case dl::nn::LinearInit::XavierUniform:
+            return "xavier";
+        case dl::nn::LinearInit::KaimingUniform:
+            return "kaiming";
+    }
+    return "kaiming";
 }
 
 std::vector<int64_t> predict_classes(const dl::Tensor& logits) {
@@ -134,16 +167,13 @@ Metrics evaluate(MnistMLP& model,
     return metrics;
 }
 
-Metrics train_one_epoch(MnistMLP& model,
-                        demo::mnist::MnistDataLoader& loader,
-                        dl::optim::SGD& optimizer,
-                        int max_batches = 0) {
+int train_one_epoch(MnistMLP& model,
+                    demo::mnist::MnistDataLoader& loader,
+                    dl::optim::SGD& optimizer,
+                    int max_batches = 0) {
     model.train();
     loader.reset();
 
-    double loss_sum = 0.0;
-    std::size_t correct = 0;
-    std::size_t total = 0;
     int batches = 0;
 
     while (loader.has_next() && (max_batches <= 0 || batches < max_batches)) {
@@ -152,25 +182,13 @@ Metrics train_one_epoch(MnistMLP& model,
         optimizer.zero_grad();
         dl::Tensor logits = model(batch.images);
         dl::Tensor loss = dl::ops::cross_entropy(logits, batch.labels);
-        const float loss_value = loss.to_host<float>()[0];
 
         loss.backward();
         optimizer.step();
-
-        loss_sum += static_cast<double>(loss_value) *
-                    static_cast<double>(batch.size);
-        correct += count_correct(logits, batch.labels);
-        total += batch.size;
         ++batches;
     }
 
-    Metrics metrics;
-    if (total > 0) {
-        metrics.loss = static_cast<float>(loss_sum / static_cast<double>(total));
-        metrics.accuracy =
-            static_cast<float>(correct) / static_cast<float>(total);
-    }
-    return metrics;
+    return batches;
 }
 
 void print_sample_results(MnistMLP& model,
@@ -204,12 +222,14 @@ int main() {
     bool passed = true;
 
     try {
-        const int epochs = env_int("MNIST_EPOCHS", 100);
+        const int epochs = env_int("MNIST_EPOCHS", 10);
         const int batch_size = env_int("MNIST_BATCH_SIZE", 64);
-        const int max_train_batches = env_int("MNIST_MAX_TRAIN_BATCHES", 0);
-        const int max_test_batches = env_int("MNIST_MAX_TEST_BATCHES", 0);
+        const int max_train_batches = env_non_negative_int("MNIST_MAX_TRAIN_BATCHES", 0);
+        const int max_test_batches = env_non_negative_int("MNIST_MAX_TEST_BATCHES", 0);
+        const int train_eval_batches = env_non_negative_int("MNIST_TRAIN_EVAL_BATCHES", 20);
         const int sample_count = env_int("MNIST_SAMPLES", 3);
         const float learning_rate = env_float("MNIST_LR", 0.01f);
+        const dl::nn::LinearInit linear_init = env_linear_init();
 
         const dl::Device device(dl::DeviceType::CUDA, 0);
         demo::mnist::MnistDataLoader train_loader(
@@ -223,26 +243,30 @@ int main() {
             static_cast<std::size_t>(batch_size),
             device);
 
-        MnistMLP model(device);
+        MnistMLP model(device, linear_init);
         dl::optim::SGD optimizer(model.parameters(), learning_rate);
 
         std::cout << "mnist_mlp_demo : start\n";
         std::cout << "config : epochs=" << epochs
                   << " batch_size=" << batch_size
                   << " lr=" << learning_rate
+                  << " init=" << linear_init_name(linear_init)
+                  << " train_eval_batches=" << train_eval_batches
                   << " train_samples=" << train_loader.size()
                   << " test_samples=" << test_loader.size() << "\n";
 
         Metrics last_train;
         Metrics last_test;
         for (int epoch = 1; epoch <= epochs; ++epoch) {
-            last_train = train_one_epoch(model, train_loader, optimizer,
-                                         max_train_batches);
+            const int trained_batches = train_one_epoch(
+                model, train_loader, optimizer, max_train_batches);
+            last_train = evaluate(model, train_loader, train_eval_batches);
             last_test = evaluate(model, test_loader, max_test_batches);
 
             std::cout << std::fixed << std::setprecision(4)
                       << "epoch " << epoch
-                      << " : train_loss=" << last_train.loss
+                      << " : batches=" << trained_batches
+                      << " train_loss=" << last_train.loss
                       << " train_acc=" << last_train.accuracy
                       << " test_loss=" << last_test.loss
                       << " test_acc=" << last_test.accuracy << "\n";
