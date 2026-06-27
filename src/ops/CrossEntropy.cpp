@@ -1,5 +1,7 @@
 #include <dl/ops/CrossEntropy.hpp>
 
+#include <dl/autograd/CrossEntropyOperator.hpp>
+#include <dl/autograd/GradMode.hpp>
 #include <dl/core/CudaUtils.hpp>
 #include <dl/kernels/cross_entropy.hpp>
 #include <dl/ops/OpUtils.hpp>
@@ -7,6 +9,7 @@
 #include <cuda_runtime.h>
 
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 
 namespace dl::ops {
@@ -39,6 +42,12 @@ Tensor cross_entropy(const Tensor& logits, const Tensor& labels) {
         static_cast<int>(logits.shape()[0]),
         static_cast<int>(logits.shape()[1]));
     dl::cuda::check(cudaGetLastError(), "cross_entropy kernel launch failed");
+    if (dl::autograd::is_grad_enabled() && logits.requires_grad()) {
+        auto op = std::make_shared<dl::autograd::CrossEntropyOperator>();
+        op->setup_computation_graph({logits, labels}, {loss});
+        loss.set_requires_grad(true);
+        loss.set_creator(op);
+    }
     return loss;
 }
 

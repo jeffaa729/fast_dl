@@ -1,5 +1,7 @@
 #include <dl/ops/Linear.hpp>
 
+#include <dl/autograd/AddRowBiasOperator.hpp>
+#include <dl/autograd/GradMode.hpp>
 #include <dl/core/CudaUtils.hpp>
 #include <dl/kernels/bias.hpp>
 #include <dl/ops/Matmul.hpp>
@@ -7,9 +9,37 @@
 
 #include <cuda_runtime.h>
 
+#include <memory>
 #include <stdexcept>
 
 namespace dl::ops {
+
+namespace {
+
+Tensor add_row_bias(const Tensor& input, const Tensor& bias) {
+    Tensor output = Tensor::empty_like(input);
+    output.copy_from(input);
+
+    dl::cuda::check(cudaSetDevice(input.device().index), "cudaSetDevice failed");
+    dl::kernels::add_row_bias(
+        static_cast<float*>(output.data()),
+        static_cast<const float*>(bias.data()),
+        static_cast<int>(output.shape()[0]),
+        static_cast<int>(output.shape()[1]));
+    dl::cuda::check(cudaGetLastError(), "linear bias kernel launch failed");
+
+    if (dl::autograd::is_grad_enabled() &&
+        (input.requires_grad() || bias.requires_grad())) {
+        auto op = std::make_shared<dl::autograd::AddRowBiasOperator>();
+        op->setup_computation_graph({input, bias}, {output});
+        output.set_requires_grad(true);
+        output.set_creator(op);
+    }
+
+    return output;
+}
+
+}  // namespace
     
 Tensor linear(const Tensor& input, const Tensor& weight, const Tensor& bias) {
     check_defined(input, "linear", "input");
@@ -35,15 +65,7 @@ Tensor linear(const Tensor& input, const Tensor& weight, const Tensor& bias) {
         throw std::runtime_error("linear bias shape must be [out_features]");
     }
 
-    Tensor output = matmul(input, weight);
-    dl::cuda::check(cudaSetDevice(input.device().index), "cudaSetDevice failed");
-    dl::kernels::add_row_bias(
-        static_cast<float*>(output.data()),
-        static_cast<const float*>(bias.data()),
-        static_cast<int>(output.shape()[0]),
-        static_cast<int>(output.shape()[1]));
-    dl::cuda::check(cudaGetLastError(), "linear bias kernel launch failed");
-    return output;
+    return add_row_bias(matmul(input, weight), bias);
 }
 
 }  // namespace dl::ops

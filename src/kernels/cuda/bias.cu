@@ -19,12 +19,35 @@ void launch_add_row_bias_kernel(float* output, const float* bias,
     add_row_bias_kernel<<<num_blocks, block_size>>>(output, bias, rows, cols);
 }
 
+__global__ void sum_rows_kernel(const float* input, float* output,
+                                int rows, int cols) {
+    const int col = blockIdx.x * blockDim.x + threadIdx.x;
+    if (col < cols) {
+        float sum = 0.0f;
+        for (int row = 0; row < rows; ++row) {
+            sum += input[row * cols + col];
+        }
+        output[col] = sum;
+    }
+}
+
+void launch_sum_rows_kernel(const float* input, float* output,
+                            int rows, int cols) {
+    constexpr int block_size = 256;
+    const int num_blocks = (cols + block_size - 1) / block_size;
+    sum_rows_kernel<<<num_blocks, block_size>>>(input, output, rows, cols);
+}
+
 }  // namespace
 
 namespace dl::kernels {
 
 void add_row_bias(float* output, const float* bias, int rows, int cols) {
     launch_add_row_bias_kernel(output, bias, rows, cols);
+}
+
+void sum_rows(const float* input, float* output, int rows, int cols) {
+    launch_sum_rows_kernel(input, output, rows, cols);
 }
 
 }  // namespace dl::kernels

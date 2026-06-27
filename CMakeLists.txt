@@ -23,6 +23,8 @@ find_package(CUDAToolkit REQUIRED)
 
 add_library(dl_core
     src/autograd/AddOperator.cpp
+    src/autograd/AddRowBiasOperator.cpp
+    src/autograd/CrossEntropyOperator.cpp
     src/autograd/DivOperator.cpp
     src/autograd/GradMode.cpp
     src/autograd/MatmulOperator.cpp
@@ -176,7 +178,16 @@ if(DL_BUILD_TESTS)
     add_executable(autograd_matmul_test tests/autograd/autograd_matmul_test.cpp)
     target_link_libraries(autograd_matmul_test PRIVATE dl_core)
 
-    foreach(test_name IN ITEMS tensor_test tensor_copy_test tensor_uniform_test tensor_randn_test softmax_tensor_test matmul_tensor_test gemm_transpose_tensor_test elementwise_tensor_test activation_tensor_test linear_tensor_test cross_entropy_tensor_test layernorm_tensor_test linear_module_test linear_init_test linear_kaiming_init_test relu_module_test sequential_module_test custom_module_test module_mode_test autograd_add_test no_grad_guard_test autograd_sub_test autograd_mul_test autograd_div_test autograd_relu_test autograd_matmul_test)
+    add_executable(autograd_linear_test tests/autograd/autograd_linear_test.cpp)
+    target_link_libraries(autograd_linear_test PRIVATE dl_core)
+
+    add_executable(autograd_cross_entropy_test tests/autograd/autograd_cross_entropy_test.cpp)
+    target_link_libraries(autograd_cross_entropy_test PRIVATE dl_core)
+
+    add_executable(mlp_backward_demo tests/demo/mlp_backward_demo.cpp)
+    target_link_libraries(mlp_backward_demo PRIVATE dl_core)
+
+    foreach(test_name IN ITEMS tensor_test tensor_copy_test tensor_uniform_test tensor_randn_test softmax_tensor_test matmul_tensor_test gemm_transpose_tensor_test elementwise_tensor_test activation_tensor_test linear_tensor_test cross_entropy_tensor_test layernorm_tensor_test linear_module_test linear_init_test linear_kaiming_init_test relu_module_test sequential_module_test custom_module_test module_mode_test autograd_add_test no_grad_guard_test autograd_sub_test autograd_mul_test autograd_div_test autograd_relu_test autograd_matmul_test autograd_linear_test autograd_cross_entropy_test mlp_backward_demo)
         add_test(NAME ${test_name} COMMAND ${test_name})
         set_tests_properties(${test_name} PROPERTIES
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
