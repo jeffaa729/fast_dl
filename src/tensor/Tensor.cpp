@@ -247,15 +247,28 @@ void Tensor::accumulate_grad(const Tensor& grad) {
 }
 
 void Tensor::backward() {
+    backward(Tensor::ones_like(*this));
+}
+
+void Tensor::backward(const Tensor& grad) {
     if (!defined()) {
         throw std::runtime_error("backward requires a defined tensor");
     }
     if (!requires_grad()) {
         throw std::runtime_error("backward called on a tensor that does not require gradients");
     }
+    if (!grad.defined()) {
+        throw std::runtime_error("backward gradient must be defined");
+    }
+    if (grad.shape().numel() != shape().numel() || grad.dtype() != dtype()) {
+        throw std::runtime_error("backward gradient shape or dtype does not match tensor");
+    }
+    if (grad.device().type != device().type || grad.device().index != device().index) {
+        throw std::runtime_error("backward gradient device does not match tensor");
+    }
 
     dl::autograd::NoGradGuard no_grad;
-    accumulate_grad(Tensor::ones_like(*this));
+    accumulate_grad(grad);
 
     auto root_creator = creator();
     if (!root_creator) {

@@ -1,5 +1,7 @@
 #include <dl/ops/LayerNorm.hpp>
 
+#include <dl/autograd/GradMode.hpp>
+#include <dl/autograd/LayerNormOperator.hpp>
 #include <dl/core/CudaUtils.hpp>
 #include <dl/kernels/layernorm.hpp>
 #include <dl/ops/OpUtils.hpp>
@@ -7,6 +9,7 @@
 #include <cuda_runtime.h>
 
 #include <cstdint>
+#include <memory>
 #include <stdexcept>
 
 namespace dl::ops {
@@ -32,6 +35,13 @@ Tensor layernorm(const Tensor& input, float eps) {
         cols,
         eps);
     dl::cuda::check(cudaGetLastError(), "layernorm kernel launch failed");
+
+    if (dl::autograd::is_grad_enabled() && input.requires_grad()) {
+        auto op = std::make_shared<dl::autograd::LayerNormOperator>(eps);
+        op->setup_computation_graph({input}, {output});
+        output.set_requires_grad(true);
+        output.set_creator(op);
+    }
 
     return output;
 }

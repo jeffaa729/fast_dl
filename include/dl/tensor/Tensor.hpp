@@ -102,6 +102,7 @@ public:
     void zero_grad();
 
     void backward();
+    void backward(const Tensor& grad);
 
     int generation() const;
 

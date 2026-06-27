@@ -47,6 +47,9 @@ Linear::Linear(int in_features,
         Shape({out_features}),
         DType::Float32,
         device);
+
+    weight_.set_requires_grad(true);
+    bias_.set_requires_grad(true);
 }
 
 Tensor Linear::forward(const Tensor& input) {

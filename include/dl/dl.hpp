@@ -8,5 +8,6 @@
 #include <dl/nn/Module.hpp>
 #include <dl/nn/ReLU.hpp>
 #include <dl/nn/Sequential.hpp>
+#include <dl/optim/SGD.hpp>
 #include <dl/ops/Ops.hpp>
 #include <dl/tensor/Tensor.hpp>
