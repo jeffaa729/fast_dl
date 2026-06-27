@@ -10,3 +10,4 @@
 #include <dl/kernels/bias.hpp>
 #include <dl/kernels/cross_entropy.hpp>
 #include <dl/kernels/layernorm.hpp>
+#include <dl/kernels/random.hpp>

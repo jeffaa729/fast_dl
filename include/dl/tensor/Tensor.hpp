@@ -43,8 +43,19 @@ public:
     static Tensor zeros(const Shape& shape,
                         DType dtype = DType::Float32,
                         Device device = Device());
+    static Tensor randn(Shape shape,
+                        DType dtype,
+                        Device device,
+                        float mean,
+                        float stddev,
+                        uint64_t seed = 1234);
+    static Tensor uniform(Shape shape, DType dtype, Device device, float low, float high, uint64_t seed = 1234);
+    static Tensor xavier_uniform(Shape shape, DType dtype, Device device, uint64_t seed = 1234);
+    static Tensor kaiming_uniform(Shape shape, DType dtype, Device device, uint64_t seed = 1234);
+
     static Tensor empty_like(const Tensor& other);
     static Tensor zeros_like(const Tensor& other);
+
 
     template <typename T>
     static Tensor from_host(const std::vector<T>& data,

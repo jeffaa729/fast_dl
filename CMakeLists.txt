@@ -33,6 +33,7 @@ add_library(dl_core
     src/ops/Linear.cpp
     src/ops/OpUtils.cpp
     src/ops/Softmax.cpp
+    src/nn/Linear.cpp
     src/tensor/Tensor.cpp
     src/tensor/TensorImpl.cpp
     src/ops/Matmul.cpp
@@ -49,6 +50,7 @@ add_library(dl_cuda_kernels
     src/kernels/cuda/softmax.cu
     src/kernels/cuda/transpose.cu
     src/kernels/cuda/vector_add.cu
+    src/kernels/cuda/random.cu
 )
 
 target_include_directories(dl_core
@@ -69,7 +71,7 @@ target_include_directories(dl_cuda_kernels
 )
 
 target_link_libraries(dl_core PUBLIC dl_cuda_kernels CUDA::cudart)
-target_link_libraries(dl_cuda_kernels PUBLIC CUDA::cudart CUDA::cublas)
+target_link_libraries(dl_cuda_kernels PUBLIC CUDA::cudart CUDA::cublas CUDA::curand)
 
 target_compile_options(dl_core
     PRIVATE
@@ -92,6 +94,12 @@ if(DL_BUILD_TESTS)
     add_executable(tensor_copy_test tests/tensor/tensor_copy_test.cpp)
     target_link_libraries(tensor_copy_test PRIVATE dl_core)
 
+    add_executable(tensor_uniform_test tests/tensor/tensor_uniform_test.cpp)
+    target_link_libraries(tensor_uniform_test PRIVATE dl_core)
+
+    add_executable(tensor_randn_test tests/tensor/tensor_randn_test.cpp)
+    target_link_libraries(tensor_randn_test PRIVATE dl_core)
+
     add_executable(softmax_tensor_test tests/tensor/softmax_tensor_test.cpp)
     target_link_libraries(softmax_tensor_test PRIVATE dl_core)
 
@@ -113,7 +121,16 @@ if(DL_BUILD_TESTS)
     add_executable(layernorm_tensor_test tests/tensor/layernorm_tensor_test.cpp)
     target_link_libraries(layernorm_tensor_test PRIVATE dl_core)
 
-    foreach(test_name IN ITEMS tensor_test tensor_copy_test softmax_tensor_test matmul_tensor_test elementwise_tensor_test activation_tensor_test linear_tensor_test cross_entropy_tensor_test layernorm_tensor_test)
+    add_executable(linear_module_test tests/nn/linear_module_test.cpp)
+    target_link_libraries(linear_module_test PRIVATE dl_core)
+
+    add_executable(linear_init_test tests/nn/linear_init_test.cpp)
+    target_link_libraries(linear_init_test PRIVATE dl_core)
+
+    add_executable(linear_kaiming_init_test tests/nn/linear_kaiming_init_test.cpp)
+    target_link_libraries(linear_kaiming_init_test PRIVATE dl_core)
+
+    foreach(test_name IN ITEMS tensor_test tensor_copy_test tensor_uniform_test tensor_randn_test softmax_tensor_test matmul_tensor_test elementwise_tensor_test activation_tensor_test linear_tensor_test cross_entropy_tensor_test layernorm_tensor_test linear_module_test linear_init_test linear_kaiming_init_test)
         add_test(NAME ${test_name} COMMAND ${test_name})
         set_tests_properties(${test_name} PROPERTIES
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
