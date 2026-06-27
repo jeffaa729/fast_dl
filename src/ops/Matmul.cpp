@@ -2,6 +2,7 @@
 
 #include <dl/core/CudaUtils.hpp>
 #include <dl/kernels/gemm.hpp>
+#include <dl/ops/OpUtils.hpp>
 
 #include <cuda_runtime.h>
 
@@ -11,25 +12,15 @@
 namespace dl::ops {
 
 Tensor matmul(const Tensor& a, const Tensor& b) {
-    if (!a.defined() || !b.defined()) {
-        throw std::runtime_error("matmul input tensors are not defined");
-    }
-
-    if (!a.device().is_cuda() || !b.device().is_cuda()) {
-        throw std::runtime_error("matmul currently supports CUDA tensors only");
-    }
-
-    if (a.device().index != b.device().index) {
-        throw std::runtime_error("matmul inputs must be on the same CUDA device");
-    }
-
-    if (a.dtype() != DType::Float32 || b.dtype() != DType::Float32) {
-        throw std::runtime_error("matmul currently supports Float32 tensors only");
-    }
-
-    if (a.shape().rank() != 2 || b.shape().rank() != 2) {
-        throw std::runtime_error("matmul input tensors must be 2D");
-    }
+    check_defined(a, "matmul", "left");
+    check_defined(b, "matmul", "right");
+    check_rank(a, 2, "matmul", "left");
+    check_rank(b, 2, "matmul", "right");
+    check_float32(a, "matmul", "left");
+    check_float32(b, "matmul", "right");
+    check_cuda(a, "matmul", "left");
+    check_cuda(b, "matmul", "right");
+    check_same_device(a, b, "matmul");
 
     if (a.shape()[1] != b.shape()[0]) {
         throw std::runtime_error("matmul input tensors have incompatible shapes");
