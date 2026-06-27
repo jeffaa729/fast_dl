@@ -2,11 +2,12 @@
 
 #include <dl/core/CudaUtils.hpp>
 #include <dl/kernels/elementwise.hpp>
+#include <dl/ops/OpUtils.hpp>
 
 #include <cuda_runtime.h>
 
-#include <stdexcept>
 #include <cstdint>
+#include <string>
 
 namespace dl {
 
@@ -29,27 +30,13 @@ Tensor operator/(const Tensor& a, const Tensor& b) {
 }
 
 namespace dl::ops {
-Tensor add(const Tensor& a, const Tensor& b) {
-    if (!a.defined() || !b.defined()) {
-        throw std::runtime_error("add input tensors are not defined");
-    }
 
-    if (a.shape()[0] != b.shape()[0] || a.shape()[1] != b.shape()[1]) {
-        throw std::runtime_error("add input tensors must have the same shape");
-    }
+namespace {
 
-    if (a.dtype() != b.dtype()) {
-        throw std::runtime_error("add input tensors must have the same dtype");
-    }
-
-    if (!a.device().is_cuda() || !b.device().is_cuda()) {
-        throw std::runtime_error("add currently supports CUDA tensors only");
-    }
-
-    if (a.device().index != b.device().index) {
-        throw std::runtime_error("add inputs must be on the same CUDA device");
-    }
-
+Tensor run_elementwise(const Tensor& a, const Tensor& b,
+                       dl::kernels::ElementwiseOp kernel_op,
+                       const char* op_name) {
+    check_binary_float_cuda_op(a, b, op_name);
     Tensor output(a.shape(), a.dtype(), a.device());
     dl::cuda::check(cudaSetDevice(a.device().index), "cudaSetDevice failed");
     dl::kernels::elementwise(
@@ -57,108 +44,27 @@ Tensor add(const Tensor& a, const Tensor& b) {
         static_cast<const float*>(b.data()),
         static_cast<float*>(output.data()),
         static_cast<int>(a.numel()),
-        dl::kernels::ElementwiseOp::Add);
-    dl::cuda::check(cudaGetLastError(), "add kernel launch failed");    
+        kernel_op);
+    dl::cuda::check(cudaGetLastError(), (std::string(op_name) + " kernel launch failed").c_str());
     return output;
+}
+
+}  // namespace
+
+Tensor add(const Tensor& a, const Tensor& b) {
+    return run_elementwise(a, b, dl::kernels::ElementwiseOp::Add, "add");
 }
 
 Tensor sub(const Tensor& a, const Tensor& b) {
-    if (!a.defined() || !b.defined()) {
-        throw std::runtime_error("sub input tensors are not defined");
-    }
-
-    if (a.shape()[0] != b.shape()[0] || a.shape()[1] != b.shape()[1]) {
-        throw std::runtime_error("sub input tensors must have the same shape");
-    }
-
-    if (a.dtype() != b.dtype()) {
-        throw std::runtime_error("sub input tensors must have the same dtype");
-    }
-
-    if (!a.device().is_cuda() || !b.device().is_cuda()) {
-        throw std::runtime_error("sub currently supports CUDA tensors only");
-    }
-
-    if (a.device().index != b.device().index) {
-        throw std::runtime_error("sub inputs must be on the same CUDA device");
-    }
-
-    Tensor output(a.shape(), a.dtype(), a.device());
-    dl::cuda::check(cudaSetDevice(a.device().index), "cudaSetDevice failed");
-    dl::kernels::elementwise(
-        static_cast<const float*>(a.data()),
-        static_cast<const float*>(b.data()),
-        static_cast<float*>(output.data()),
-        static_cast<int>(a.numel()),
-        dl::kernels::ElementwiseOp::Sub);
-    dl::cuda::check(cudaGetLastError(), "sub kernel launch failed");    
-    return output;
+    return run_elementwise(a, b, dl::kernels::ElementwiseOp::Sub, "sub");
 }
 
 Tensor mul(const Tensor& a, const Tensor& b) {
-    if (!a.defined() || !b.defined()) {
-        throw std::runtime_error("mul input tensors are not defined");
-    }
-
-    if (a.shape()[0] != b.shape()[0] || a.shape()[1] != b.shape()[1]) {
-        throw std::runtime_error("mul input tensors must have the same shape");
-    }
-
-    if (a.dtype() != b.dtype()) {
-        throw std::runtime_error("mul input tensors must have the same dtype");
-    }
-
-    if (!a.device().is_cuda() || !b.device().is_cuda()) {
-        throw std::runtime_error("mul currently supports CUDA tensors only");
-    }
-
-    if (a.device().index != b.device().index) {
-        throw std::runtime_error("mul inputs must be on the same CUDA device");
-    }
-
-    Tensor output(a.shape(), a.dtype(), a.device());
-    dl::cuda::check(cudaSetDevice(a.device().index), "cudaSetDevice failed");
-    dl::kernels::elementwise(
-        static_cast<const float*>(a.data()),
-        static_cast<const float*>(b.data()),
-        static_cast<float*>(output.data()),
-        static_cast<int>(a.numel()),
-        dl::kernels::ElementwiseOp::Mul);
-    dl::cuda::check(cudaGetLastError(), "mul kernel launch failed");    
-    return output;
+    return run_elementwise(a, b, dl::kernels::ElementwiseOp::Mul, "mul");
 }
 
 Tensor div(const Tensor& a, const Tensor& b) {
-    if (!a.defined() || !b.defined()) {
-        throw std::runtime_error("div input tensors are not defined");
-    }
-
-    if (a.shape()[0] != b.shape()[0] || a.shape()[1] != b.shape()[1]) {
-        throw std::runtime_error("div input tensors must have the same shape");
-    }
-
-    if (a.dtype() != b.dtype()) {
-        throw std::runtime_error("div input tensors must have the same dtype");
-    }
-
-    if (!a.device().is_cuda() || !b.device().is_cuda()) {
-        throw std::runtime_error("div currently supports CUDA tensors only");
-    }
-
-    if (a.device().index != b.device().index) {
-        throw std::runtime_error("div inputs must be on the same CUDA device");
-    }
-
-    Tensor output(a.shape(), a.dtype(), a.device());
-    dl::cuda::check(cudaSetDevice(a.device().index), "cudaSetDevice failed");
-    dl::kernels::elementwise(
-        static_cast<const float*>(a.data()),
-        static_cast<const float*>(b.data()),
-        static_cast<float*>(output.data()),
-        static_cast<int>(a.numel()),
-        dl::kernels::ElementwiseOp::Div);
-    dl::cuda::check(cudaGetLastError(), "div kernel launch failed");    
-    return output;
+    return run_elementwise(a, b, dl::kernels::ElementwiseOp::Div, "div");
 }
 
-}
+}  // namespace dl::ops
