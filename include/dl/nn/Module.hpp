@@ -13,12 +13,25 @@ public:
     virtual Tensor forward(const Tensor& input) = 0;
 
     virtual std::vector<Tensor*> parameters() {
-        return {};
+        std::vector<Tensor*> result;
+        for (Module* child : children_) {
+            std::vector<Tensor*> child_params = child->parameters();
+            result.insert(result.end(), child_params.begin(), child_params.end());
+        }
+        return result;
     }
 
     Tensor operator()(const Tensor& input) {
         return forward(input);
     }
+
+protected:
+    void register_module(Module& module) {
+        children_.push_back(&module);
+    }
+
+private:
+    std::vector<Module*> children_;
 };
 
 }  // namespace dl::nn

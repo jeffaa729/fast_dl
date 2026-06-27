@@ -34,6 +34,8 @@ add_library(dl_core
     src/ops/OpUtils.cpp
     src/ops/Softmax.cpp
     src/nn/Linear.cpp
+    src/nn/ReLU.cpp
+    src/nn/Sequential.cpp
     src/tensor/Tensor.cpp
     src/tensor/TensorImpl.cpp
     src/ops/Matmul.cpp
@@ -130,7 +132,16 @@ if(DL_BUILD_TESTS)
     add_executable(linear_kaiming_init_test tests/nn/linear_kaiming_init_test.cpp)
     target_link_libraries(linear_kaiming_init_test PRIVATE dl_core)
 
-    foreach(test_name IN ITEMS tensor_test tensor_copy_test tensor_uniform_test tensor_randn_test softmax_tensor_test matmul_tensor_test elementwise_tensor_test activation_tensor_test linear_tensor_test cross_entropy_tensor_test layernorm_tensor_test linear_module_test linear_init_test linear_kaiming_init_test)
+    add_executable(relu_module_test tests/nn/relu_module_test.cpp)
+    target_link_libraries(relu_module_test PRIVATE dl_core)
+
+    add_executable(sequential_module_test tests/nn/sequential_module_test.cpp)
+    target_link_libraries(sequential_module_test PRIVATE dl_core)
+
+    add_executable(custom_module_test tests/nn/custom_module_test.cpp)
+    target_link_libraries(custom_module_test PRIVATE dl_core)
+
+    foreach(test_name IN ITEMS tensor_test tensor_copy_test tensor_uniform_test tensor_randn_test softmax_tensor_test matmul_tensor_test elementwise_tensor_test activation_tensor_test linear_tensor_test cross_entropy_tensor_test layernorm_tensor_test linear_module_test linear_init_test linear_kaiming_init_test relu_module_test sequential_module_test custom_module_test)
         add_test(NAME ${test_name} COMMAND ${test_name})
         set_tests_properties(${test_name} PROPERTIES
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
