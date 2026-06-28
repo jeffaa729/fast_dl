@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -124,16 +125,41 @@ Result benchmark_linear(const dl::Device& device, int warmup, int iterations) {
     return make_result("linear", "1024x784x128", warmup, iterations, total_ms);
 }
 
-Result benchmark_relu(const dl::Device& device, int warmup, int iterations) {
+template <typename Fn>
+Result benchmark_unary(const std::string& op,
+                       const dl::Device& device,
+                       int warmup,
+                       int iterations,
+                       uint64_t seed,
+                       Fn fn) {
     constexpr int64_t elements = 1 << 20;
-    dl::Tensor x = randn(dl::Shape({elements}), device, 300);
+    dl::Tensor x = randn(dl::Shape({elements}), device, seed);
 
     const float total_ms = time_cuda_ms(warmup, iterations, [&] {
-        dl::Tensor y = dl::ops::relu(x);
+        dl::Tensor y = fn(x);
         (void)y.data();
     });
 
-    return make_result("relu", "1048576", warmup, iterations, total_ms);
+    return make_result(op, "1048576", warmup, iterations, total_ms);
+}
+
+template <typename Fn>
+Result benchmark_binary(const std::string& op,
+                        const dl::Device& device,
+                        int warmup,
+                        int iterations,
+                        uint64_t seed,
+                        Fn fn) {
+    constexpr int64_t elements = 1 << 20;
+    dl::Tensor a = randn(dl::Shape({elements}), device, seed);
+    dl::Tensor b = randn(dl::Shape({elements}), device, seed + 1);
+
+    const float total_ms = time_cuda_ms(warmup, iterations, [&] {
+        dl::Tensor y = fn(a, b);
+        (void)y.data();
+    });
+
+    return make_result(op, "1048576", warmup, iterations, total_ms);
 }
 
 Result benchmark_softmax(const dl::Device& device, int warmup, int iterations) {
@@ -209,14 +235,28 @@ void write_csv(const std::string& path, const std::vector<Result>& results) {
 
 void print_results(const std::vector<Result>& results) {
     std::cout << "ops_benchmark : results\n";
-    std::cout << "op,shape,iterations,warmup,total_ms,avg_ms\n";
+    std::cout << std::left
+              << std::setw(18) << "op"
+              << std::setw(20) << "shape"
+              << std::right
+              << std::setw(12) << "iters"
+              << std::setw(10) << "warmup"
+              << std::setw(14) << "total_ms"
+              << std::setw(12) << "avg_ms"
+              << "\n";
+    std::cout << std::string(86, '-') << "\n";
+
+    std::cout << std::fixed << std::setprecision(4);
     for (const Result& result : results) {
-        std::cout << result.op << ','
-                  << result.shape << ','
-                  << result.iterations << ','
-                  << result.warmup << ','
-                  << result.total_ms << ','
-                  << result.avg_ms << '\n';
+        std::cout << std::left
+                  << std::setw(18) << result.op
+                  << std::setw(20) << result.shape
+                  << std::right
+                  << std::setw(12) << result.iterations
+                  << std::setw(10) << result.warmup
+                  << std::setw(14) << result.total_ms
+                  << std::setw(12) << result.avg_ms
+                  << "\n";
     }
 }
 
@@ -232,9 +272,29 @@ int main() {
 
         dl::autograd::NoGradGuard no_grad;
         std::vector<Result> results;
+        results.push_back(benchmark_binary("add", device, warmup, iterations,
+                                           10, dl::ops::add));
+        results.push_back(benchmark_binary("sub", device, warmup, iterations,
+                                           20, dl::ops::sub));
+        results.push_back(benchmark_binary("mul", device, warmup, iterations,
+                                           30, dl::ops::mul));
+        results.push_back(benchmark_binary("div", device, warmup, iterations,
+                                           40, dl::ops::div));
+        results.push_back(benchmark_unary("relu", device, warmup, iterations,
+                                          300, dl::ops::relu));
+        results.push_back(benchmark_unary("leaky_relu", device, warmup,
+                                          iterations, 310,
+                                          [](const dl::Tensor& x) {
+                                              return dl::ops::leaky_relu(x);
+                                          }));
+        results.push_back(benchmark_unary("gelu", device, warmup, iterations,
+                                          320, dl::ops::gelu));
+        results.push_back(benchmark_unary("sigmoid", device, warmup, iterations,
+                                          330, dl::ops::sigmoid));
+        results.push_back(benchmark_unary("tanh", device, warmup, iterations,
+                                          340, dl::ops::tanh));
         results.push_back(benchmark_matmul(device, warmup, iterations));
         results.push_back(benchmark_linear(device, warmup, iterations));
-        results.push_back(benchmark_relu(device, warmup, iterations));
         results.push_back(benchmark_softmax(device, warmup, iterations));
         results.push_back(benchmark_layernorm(device, warmup, iterations));
         results.push_back(benchmark_cross_entropy(device, warmup, iterations));
