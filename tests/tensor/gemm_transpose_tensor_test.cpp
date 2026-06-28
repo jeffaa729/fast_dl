@@ -78,8 +78,7 @@ bool run_case(bool trans_a, bool trans_b) {
         n,
         k,
         trans_a,
-        trans_b,
-        dl::kernels::GemmAlgo::Cublas);
+        trans_b);
     dl::cuda::check(cudaGetLastError(), "gemm transpose test launch failed");
     dl::cuda::check(cudaDeviceSynchronize(), "gemm transpose test synchronize failed");
 

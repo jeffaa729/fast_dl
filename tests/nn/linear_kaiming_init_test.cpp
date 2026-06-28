@@ -26,7 +26,9 @@ int main() {
                  params[0]->shape()[0] == in_features &&
                  params[0]->shape()[1] == out_features &&
                  params[1]->shape().rank() == 1 &&
-                 params[1]->shape()[0] == out_features;
+                 params[1]->shape()[0] == out_features &&
+                 params[0]->requires_grad() &&
+                 params[1]->requires_grad();
 
         const float limit = std::sqrt(6.0f / static_cast<float>(in_features));
         const std::vector<float> weight = params[0]->to_host<float>();

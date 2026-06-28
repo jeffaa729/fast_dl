@@ -1,5 +1,6 @@
 #include <dl/tensor/TensorImpl.hpp>
 
+#include <dl/core/CudaAllocator.hpp>
 #include <dl/core/CudaUtils.hpp>
 
 #include <cuda_runtime.h>
@@ -74,8 +75,7 @@ void TensorImpl::allocate() {
     if (!device_.is_cuda()) {
         throw std::runtime_error("Tensor currently supports CUDA allocation only");
     }
-    dl::cuda::check(cudaSetDevice(device_.index), "cudaSetDevice failed");
-    dl::cuda::check(cudaMalloc(&data_, nbytes()), "cudaMalloc failed");
+    data_ = dl::cuda::allocate(nbytes(), device_.index);
 }
 
 void TensorImpl::release() {
@@ -83,8 +83,7 @@ void TensorImpl::release() {
         return;
     }
     if (device_.is_cuda()) {
-        cudaSetDevice(device_.index);
-        cudaFree(data_);
+        dl::cuda::deallocate(data_, nbytes(), device_.index);
     }
     data_ = nullptr;
 }
@@ -160,8 +159,7 @@ void TensorImpl::accumulate_grad(const Tensor& grad) {
     }
 
     if (!grad_.defined()) {
-        grad_ = Tensor(grad.shape(), grad.dtype(), grad.device());
-        grad_.copy_from(grad);
+        grad_ = grad;
     } else {
         grad_ = dl::ops::add(grad_, grad);
     }

@@ -22,8 +22,6 @@ CUDA_BENCH_NOINLINE void vector_add_cpu(const float* a, const float* b, float* c
 namespace dl::bench {
 
 int vector_add_benchmark(std::size_t size) {
-    constexpr dl::kernels::VectorAddAlgo algo = dl::kernels::VectorAddAlgo::Naive;
-
     std::vector<float> a(size);
     std::vector<float> b(size);
     std::vector<float> cpu_result(size);
@@ -41,8 +39,7 @@ int vector_add_benchmark(std::size_t size) {
     device_a.copy_from_host(a.data());
     device_b.copy_from_host(b.data());
 
-    dl::kernels::vector_add(device_a.data(), device_b.data(), device_c.data(), size,
-                    algo);
+    dl::kernels::vector_add(device_a.data(), device_b.data(), device_c.data(), size);
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 

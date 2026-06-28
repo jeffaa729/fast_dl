@@ -25,12 +25,11 @@ namespace dl::bench {
 
 namespace {
 
-bool run_and_validate_transpose(dl::kernels::TransposeAlgo algo,
-                                dl::bench::DeviceBuffer<float>& device_a,
+bool run_and_validate_transpose(dl::bench::DeviceBuffer<float>& device_a,
                                 dl::bench::DeviceBuffer<float>& device_b,
                                 float* gpu_result, const float* cpu_result,
                                 std::size_t n) {
-    dl::kernels::transpose(device_a.data(), device_b.data(), n, algo);
+    dl::kernels::transpose(device_a.data(), device_b.data(), n);
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -63,20 +62,10 @@ int transpose_benchmark(std::size_t n) {
     dl::bench::DeviceBuffer<float> device_b(n * n);
     device_a.copy_from_host(a.data());
 
-    const bool naive_valid = run_and_validate_transpose(
-        dl::kernels::TransposeAlgo::Naive, device_a, device_b, gpu_result.data(),
-        cpu_result.data(), n);
+    const bool valid = run_and_validate_transpose(
+        device_a, device_b, gpu_result.data(), cpu_result.data(), n);
 
-    const bool shared_valid = run_and_validate_transpose(
-        dl::kernels::TransposeAlgo::Shared, device_a, device_b, gpu_result.data(),
-        cpu_result.data(), n);
-
-    const bool padding_valid = run_and_validate_transpose(
-        dl::kernels::TransposeAlgo::Padding, device_a, device_b, gpu_result.data(),
-        cpu_result.data(), n);
-
-    return naive_valid && shared_valid && padding_valid ? EXIT_SUCCESS
-                                                        : EXIT_FAILURE;
+    return valid ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 }  // namespace dl::bench

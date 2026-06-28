@@ -28,3 +28,8 @@ bin/
 *.dylib
 /.cuda-driver-lib
 /ncu_reports
+mnist_profile.sqlite
+mnist_profile.nsys-rep
+/benchmark_results
+/python-env
+/python-envVENV_DIR=python-env

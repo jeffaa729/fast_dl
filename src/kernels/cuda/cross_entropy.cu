@@ -42,6 +42,56 @@ void launch_cross_entropy_kernel(const float* logits, const int64_t* labels,
                                                         batch, classes);
 }
 
+__global__ void cross_entropy_backward_kernel(const float* logits,
+                                              const int64_t* labels,
+                                              const float* grad_loss,
+                                              float* grad_logits,
+                                              int batch,
+                                              int classes) {
+    const int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    const int total = batch * classes;
+    if (idx >= total) {
+        return;
+    }
+
+    const int row = idx / classes;
+    const int col = idx % classes;
+    const int64_t label = labels[row];
+    if (label < 0 || label >= classes) {
+        grad_logits[idx] = 0.0f;
+        return;
+    }
+
+    const float* row_logits = logits + row * classes;
+    float max_logit = row_logits[0];
+    for (int i = 1; i < classes; ++i) {
+        max_logit = fmaxf(max_logit, row_logits[i]);
+    }
+
+    float sum_exp = 0.0f;
+    for (int i = 0; i < classes; ++i) {
+        sum_exp += expf(row_logits[i] - max_logit);
+    }
+
+    const float softmax = expf(row_logits[col] - max_logit) / sum_exp;
+    const float target = col == static_cast<int>(label) ? 1.0f : 0.0f;
+    grad_logits[idx] =
+        grad_loss[0] * (softmax - target) / static_cast<float>(batch);
+}
+
+void launch_cross_entropy_backward_kernel(const float* logits,
+                                          const int64_t* labels,
+                                          const float* grad_loss,
+                                          float* grad_logits,
+                                          int batch,
+                                          int classes) {
+    constexpr int threads_per_block = 256;
+    const int total = batch * classes;
+    const int blocks = (total + threads_per_block - 1) / threads_per_block;
+    cross_entropy_backward_kernel<<<blocks, threads_per_block>>>(
+        logits, labels, grad_loss, grad_logits, batch, classes);
+}
+
 }  // namespace
 
 namespace dl::kernels {
@@ -49,6 +99,13 @@ namespace dl::kernels {
 void cross_entropy(const float* logits, const int64_t* labels, float* loss,
                    int batch, int classes) {
     launch_cross_entropy_kernel(logits, labels, loss, batch, classes);
+}
+
+void cross_entropy_backward(const float* logits, const int64_t* labels,
+                            const float* grad_loss, float* grad_logits,
+                            int batch, int classes) {
+    launch_cross_entropy_backward_kernel(
+        logits, labels, grad_loss, grad_logits, batch, classes);
 }
 
 }  // namespace dl::kernels

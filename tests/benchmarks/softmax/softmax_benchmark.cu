@@ -47,12 +47,11 @@ bool validate_softmax(const float* cpu_result, const float* gpu_result,
     return true;
 }
 
-bool run_and_validate_softmax(dl::kernels::SoftmaxAlgo algo,
-                              dl::bench::DeviceBuffer<float>& device_input,
+bool run_and_validate_softmax(dl::bench::DeviceBuffer<float>& device_input,
                               dl::bench::DeviceBuffer<float>& device_output,
                               float* gpu_result, const float* cpu_result,
                               std::size_t rows, std::size_t cols) {
-    dl::kernels::softmax(device_input.data(), device_output.data(), rows, cols, algo);
+    dl::kernels::softmax(device_input.data(), device_output.data(), rows, cols);
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -82,20 +81,11 @@ int softmax_benchmark(std::size_t rows, std::size_t cols) {
     dl::bench::DeviceBuffer<float> device_output(size);
     device_input.copy_from_host(input.data());
 
-    const bool naive_valid = run_and_validate_softmax(
-        dl::kernels::SoftmaxAlgo::Naive, device_input, device_output, gpu_result.data(),
+    const bool valid = run_and_validate_softmax(
+        device_input, device_output, gpu_result.data(),
         cpu_result.data(), rows, cols);
 
-    const bool shared_memory_valid = run_and_validate_softmax(
-        dl::kernels::SoftmaxAlgo::SharedMemory, device_input, device_output,
-        gpu_result.data(), cpu_result.data(), rows, cols);
-
-    const bool reg_cache_valid = run_and_validate_softmax(
-        dl::kernels::SoftmaxAlgo::WarpShuffleRegCache, device_input, device_output,
-        gpu_result.data(), cpu_result.data(), rows, cols);
-
-    return naive_valid && shared_memory_valid && reg_cache_valid ? EXIT_SUCCESS
-                                                                 : EXIT_FAILURE;
+    return valid ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 }  // namespace dl::bench

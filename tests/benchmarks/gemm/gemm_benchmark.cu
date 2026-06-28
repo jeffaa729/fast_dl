@@ -31,8 +31,7 @@ namespace dl::bench {
 
 namespace {
 
-bool run_and_validate_gemm(dl::kernels::GemmAlgo algo,
-                           dl::bench::DeviceBuffer<float>& device_a,
+bool run_and_validate_gemm(dl::bench::DeviceBuffer<float>& device_a,
                            dl::bench::DeviceBuffer<float>& device_b,
                            dl::bench::DeviceBuffer<float>& device_c,
                            float* gpu_result, const float* cpu_result,
@@ -41,8 +40,7 @@ bool run_and_validate_gemm(dl::kernels::GemmAlgo algo,
     dl::kernels::gemm(device_a.data(), device_b.data(), device_c.data(),
                       static_cast<int>(m),
                       static_cast<int>(n),
-                      static_cast<int>(k),
-                      algo);
+                      static_cast<int>(k));
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -83,25 +81,11 @@ int gemm_benchmark(std::size_t m, std::size_t n, std::size_t k) {
     device_a.copy_from_host(a.data());
     device_b.copy_from_host(b.data());
 
-    const bool naive_valid = run_and_validate_gemm(
-        dl::kernels::GemmAlgo::Naive, device_a, device_b, device_c, gpu_result.data(),
+    const bool valid = run_and_validate_gemm(
+        device_a, device_b, device_c, gpu_result.data(),
         cpu_result.data(), c_size, m, n, k);
 
-    const bool tiled_valid = run_and_validate_gemm(
-        dl::kernels::GemmAlgo::Tiled, device_a, device_b, device_c, gpu_result.data(),
-        cpu_result.data(), c_size, m, n, k);
-
-    const bool register_valid = run_and_validate_gemm(
-        dl::kernels::GemmAlgo::Register, device_a, device_b, device_c,
-        gpu_result.data(), cpu_result.data(), c_size, m, n, k);
-
-    const bool cublas_valid = run_and_validate_gemm(
-        dl::kernels::GemmAlgo::Cublas, device_a, device_b, device_c, gpu_result.data(),
-        cpu_result.data(), c_size, m, n, k);
-
-    return naive_valid && tiled_valid && register_valid && cublas_valid
-               ? EXIT_SUCCESS
-               : EXIT_FAILURE;
+    return valid ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 }  // namespace dl::bench
