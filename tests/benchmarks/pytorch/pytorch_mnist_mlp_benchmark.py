@@ -170,13 +170,13 @@ def train_one_epoch(model: MnistMLP,
 
 def load_data(batch_size: int) -> Tuple[MnistBatches, MnistBatches]:
     train = MnistBatches(
-        read_images("mnist/train-images-idx3-ubyte"),
-        read_labels("mnist/train-labels-idx1-ubyte"),
+        read_images("data/mnist/train-images-idx3-ubyte"),
+        read_labels("data/mnist/train-labels-idx1-ubyte"),
         batch_size,
     )
     test = MnistBatches(
-        read_images("mnist/t10k-images-idx3-ubyte"),
-        read_labels("mnist/t10k-labels-idx1-ubyte"),
+        read_images("data/mnist/t10k-images-idx3-ubyte"),
+        read_labels("data/mnist/t10k-labels-idx1-ubyte"),
         batch_size,
     )
     return train, test

@@ -233,13 +233,13 @@ int main() {
 
         const dl::Device device(dl::DeviceType::CUDA, 0);
         demo::mnist::MnistDataLoader train_loader(
-            "mnist/train-images-idx3-ubyte",
-            "mnist/train-labels-idx1-ubyte",
+            "data/mnist/train-images-idx3-ubyte",
+            "data/mnist/train-labels-idx1-ubyte",
             static_cast<std::size_t>(batch_size),
             device);
         demo::mnist::MnistDataLoader test_loader(
-            "mnist/t10k-images-idx3-ubyte",
-            "mnist/t10k-labels-idx1-ubyte",
+            "data/mnist/t10k-images-idx3-ubyte",
+            "data/mnist/t10k-labels-idx1-ubyte",
             static_cast<std::size_t>(batch_size),
             device);
 

@@ -9,8 +9,8 @@ int main() {
     try {
         const dl::Device device(dl::DeviceType::CUDA, 0);
         demo::mnist::MnistDataLoader loader(
-            "mnist/t10k-images-idx3-ubyte",
-            "mnist/t10k-labels-idx1-ubyte",
+            "data/mnist/t10k-images-idx3-ubyte",
+            "data/mnist/t10k-labels-idx1-ubyte",
             32,
             device);
 

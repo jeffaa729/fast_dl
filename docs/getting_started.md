@@ -67,13 +67,13 @@ tensor_test : passed
 
 ## Run The MNIST Demo
 
-The MNIST demo expects IDX files in the repo root under `mnist/`:
+The MNIST demo expects IDX files under `data/mnist/`:
 
 ```text
-mnist/train-images-idx3-ubyte
-mnist/train-labels-idx1-ubyte
-mnist/t10k-images-idx3-ubyte
-mnist/t10k-labels-idx1-ubyte
+data/mnist/train-images-idx3-ubyte
+data/mnist/train-labels-idx1-ubyte
+data/mnist/t10k-images-idx3-ubyte
+data/mnist/t10k-labels-idx1-ubyte
 ```
 
 Build and run:
