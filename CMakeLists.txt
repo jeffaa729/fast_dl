@@ -200,10 +200,13 @@ if(DL_BUILD_TESTS)
     add_executable(mnist_dataloader_test tests/data/mnist_dataloader_test.cpp)
     target_link_libraries(mnist_dataloader_test PRIVATE dl_core)
 
+    add_executable(dataloader_test tests/data/dataloader_test.cpp)
+    target_link_libraries(dataloader_test PRIVATE dl_core)
+
     add_executable(mnist_mlp_demo tests/demo/mnist_mlp_demo.cpp)
     target_link_libraries(mnist_mlp_demo PRIVATE dl_core)
 
-    foreach(test_name IN ITEMS tensor_test tensor_copy_test tensor_uniform_test tensor_randn_test softmax_tensor_test matmul_tensor_test gemm_transpose_tensor_test elementwise_tensor_test activation_tensor_test linear_tensor_test cross_entropy_tensor_test layernorm_tensor_test linear_module_test linear_init_test linear_kaiming_init_test relu_module_test sequential_module_test custom_module_test module_mode_test autograd_add_test no_grad_guard_test autograd_sub_test autograd_mul_test autograd_div_test autograd_relu_test autograd_matmul_test autograd_linear_test autograd_cross_entropy_test autograd_layernorm_test mlp_backward_test training_loop_test mnist_dataloader_test mnist_mlp_demo)
+    foreach(test_name IN ITEMS tensor_test tensor_copy_test tensor_uniform_test tensor_randn_test softmax_tensor_test matmul_tensor_test gemm_transpose_tensor_test elementwise_tensor_test activation_tensor_test linear_tensor_test cross_entropy_tensor_test layernorm_tensor_test linear_module_test linear_init_test linear_kaiming_init_test relu_module_test sequential_module_test custom_module_test module_mode_test autograd_add_test no_grad_guard_test autograd_sub_test autograd_mul_test autograd_div_test autograd_relu_test autograd_matmul_test autograd_linear_test autograd_cross_entropy_test autograd_layernorm_test mlp_backward_test training_loop_test mnist_dataloader_test dataloader_test mnist_mlp_demo)
         add_test(NAME ${test_name} COMMAND ${test_name})
         set_tests_properties(${test_name} PROPERTIES
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
