@@ -2,15 +2,20 @@
 
 #include <dl/dl.hpp>
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace demo::mnist {
+
+struct MnistSample {
+    std::vector<float> image;
+    int64_t label = 0;
+};
 
 struct MnistBatch {
     dl::Tensor images;
@@ -18,18 +23,10 @@ struct MnistBatch {
     std::size_t size = 0;
 };
 
-class MnistDataLoader {
+class MnistDataset : public dl::data::Dataset<MnistSample> {
 public:
-    MnistDataLoader(const std::string& image_path,
-                    const std::string& label_path,
-                    std::size_t batch_size,
-                    const dl::Device& device)
-        : batch_size_(batch_size),
-          device_(device) {
-        if (batch_size_ == 0) {
-            throw std::runtime_error("MNIST batch size must be positive");
-        }
-
+    MnistDataset(const std::string& image_path,
+                 const std::string& label_path) {
         read_images(image_path);
         read_labels(label_path);
 
@@ -38,12 +35,25 @@ public:
         }
     }
 
-    std::size_t size() const {
+    std::size_t size() const override {
         return image_count_;
     }
 
-    std::size_t batch_size() const {
-        return batch_size_;
+    MnistSample get(std::size_t index) const override {
+        if (index >= image_count_) {
+            throw std::runtime_error("MNIST sample index out of range");
+        }
+
+        const std::size_t pixels = image_size();
+        const std::size_t offset = index * pixels;
+        std::vector<float> image(pixels, 0.0f);
+
+        for (std::size_t pixel = 0; pixel < pixels; ++pixel) {
+            image[pixel] =
+                static_cast<float>(images_[offset + pixel]) / 255.0f;
+        }
+
+        return {std::move(image), labels_[index]};
     }
 
     std::size_t rows() const {
@@ -58,59 +68,7 @@ public:
         return rows_ * cols_;
     }
 
-    void reset() {
-        cursor_ = 0;
-    }
-
-    bool has_next() const {
-        return cursor_ < image_count_;
-    }
-
-    MnistBatch next() {
-        if (!has_next()) {
-            throw std::runtime_error("MNIST dataloader has no batch left");
-        }
-
-        return make_batch(cursor_);
-    }
-
 private:
-    MnistBatch make_batch(std::size_t start) {
-        const std::size_t current_batch =
-            std::min(batch_size_, image_count_ - start);
-        const std::size_t pixels = image_size();
-
-        std::vector<float> batch_images(current_batch * pixels, 0.0f);
-        std::vector<int64_t> batch_labels(current_batch, 0);
-
-        for (std::size_t row = 0; row < current_batch; ++row) {
-            const std::size_t source_image = start + row;
-            const std::size_t source_offset = source_image * pixels;
-            const std::size_t batch_offset = row * pixels;
-
-            for (std::size_t pixel = 0; pixel < pixels; ++pixel) {
-                batch_images[batch_offset + pixel] =
-                    static_cast<float>(images_[source_offset + pixel]) / 255.0f;
-            }
-            batch_labels[row] = labels_[source_image];
-        }
-
-        cursor_ = start + current_batch;
-
-        return {
-            dl::Tensor::from_host<float>(
-                batch_images,
-                dl::Shape({static_cast<int64_t>(current_batch),
-                           static_cast<int64_t>(pixels)}),
-                device_),
-            dl::Tensor::from_host<int64_t>(
-                batch_labels,
-                dl::Shape({static_cast<int64_t>(current_batch)}),
-                device_),
-            current_batch,
-        };
-    }
-
     static uint32_t read_u32_be(std::ifstream& file) {
         unsigned char bytes[4] = {0, 0, 0, 0};
         file.read(reinterpret_cast<char*>(bytes), sizeof(bytes));
@@ -174,14 +132,98 @@ private:
         }
     }
 
-    std::size_t batch_size_ = 0;
-    dl::Device device_;
-    std::size_t cursor_ = 0;
     std::size_t image_count_ = 0;
     std::size_t rows_ = 0;
     std::size_t cols_ = 0;
     std::vector<uint8_t> images_;
     std::vector<int64_t> labels_;
+};
+
+inline MnistBatch collate_mnist_samples(
+    const std::vector<MnistSample>& samples,
+    const dl::Device& device) {
+    if (samples.empty()) {
+        throw std::runtime_error("MNIST collate requires at least one sample");
+    }
+
+    const std::size_t batch_size = samples.size();
+    const std::size_t pixels = samples[0].image.size();
+    std::vector<float> batch_images(batch_size * pixels, 0.0f);
+    std::vector<int64_t> batch_labels(batch_size, 0);
+
+    for (std::size_t row = 0; row < batch_size; ++row) {
+        if (samples[row].image.size() != pixels) {
+            throw std::runtime_error("MNIST samples have inconsistent image sizes");
+        }
+
+        const std::size_t offset = row * pixels;
+        for (std::size_t pixel = 0; pixel < pixels; ++pixel) {
+            batch_images[offset + pixel] = samples[row].image[pixel];
+        }
+        batch_labels[row] = samples[row].label;
+    }
+
+    return {
+        dl::Tensor::from_host<float>(
+            batch_images,
+            dl::Shape({static_cast<int64_t>(batch_size),
+                       static_cast<int64_t>(pixels)}),
+            device),
+        dl::Tensor::from_host<int64_t>(
+            batch_labels,
+            dl::Shape({static_cast<int64_t>(batch_size)}),
+            device),
+        batch_size,
+    };
+}
+
+class MnistDataLoader {
+public:
+    MnistDataLoader(const std::string& image_path,
+                    const std::string& label_path,
+                    std::size_t batch_size,
+                    const dl::Device& device)
+        : dataset_(image_path, label_path),
+          loader_(dataset_, batch_size, device, collate_mnist_samples) {}
+
+    MnistDataLoader(const MnistDataLoader&) = delete;
+    MnistDataLoader& operator=(const MnistDataLoader&) = delete;
+
+    std::size_t size() const {
+        return dataset_.size();
+    }
+
+    std::size_t batch_size() const {
+        return loader_.batch_size();
+    }
+
+    std::size_t rows() const {
+        return dataset_.rows();
+    }
+
+    std::size_t cols() const {
+        return dataset_.cols();
+    }
+
+    std::size_t image_size() const {
+        return dataset_.image_size();
+    }
+
+    void reset() {
+        loader_.reset();
+    }
+
+    bool has_next() const {
+        return loader_.has_next();
+    }
+
+    MnistBatch next() {
+        return loader_.next();
+    }
+
+private:
+    MnistDataset dataset_;
+    dl::data::DataLoader<MnistSample, MnistBatch> loader_;
 };
 
 }  // namespace demo::mnist
