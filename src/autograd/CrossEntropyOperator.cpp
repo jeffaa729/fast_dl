@@ -22,8 +22,8 @@ std::vector<Tensor> CrossEntropyOperator::backward(
 
     const Tensor& logits = op_inputs[0];
     const Tensor& labels = op_inputs[1];
-    const Tensor& grad_loss = grad_outputs[0];
-    Tensor grad_logits(logits.shape(), logits.dtype(), logits.device());
+    const Tensor& grad_loss = grad_outputs[0];  // dL/dloss
+    Tensor grad_logits(logits.shape(), logits.dtype(), logits.device());  // dL/dlogits
 
     dl::cuda::check(cudaSetDevice(logits.device().index), "cudaSetDevice failed");
     dl::kernels::cross_entropy_backward(
@@ -35,7 +35,10 @@ std::vector<Tensor> CrossEntropyOperator::backward(
         static_cast<int>(logits.shape()[1]));
     dl::cuda::check(cudaGetLastError(), "cross_entropy backward kernel launch failed");
 
-    return {grad_logits, Tensor()};
+    return {
+        grad_logits,  // dL/dlogits
+        Tensor(),     // dL/dlabels, labels are integer targets
+    };
 }
 
 }  // namespace dl::autograd

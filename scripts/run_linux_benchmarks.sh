@@ -4,8 +4,6 @@ set -euo pipefail
 BUILD_DIR="${BUILD_DIR:-build}"
 REPORT_DIR="${REPORT_DIR:-ncu_reports}"
 CUDA_ARCH="${CUDA_ARCH:-75}"
-# vector_add is disabled by default for now. Run it explicitly with:
-# BENCHMARKS="vector_add" bash scripts/run_linux_benchmarks.sh
 BENCHMARKS="${BENCHMARKS:-transpose reduction gemm softmax}"
 NCU_METRICS="${NCU_METRICS:-gpu__time_duration.sum,sm__throughput.avg.pct_of_peak_sustained_elapsed,dram__throughput.avg.pct_of_peak_sustained_elapsed,lts__throughput.avg.pct_of_peak_sustained_elapsed,l1tex__throughput.avg.pct_of_peak_sustained_elapsed}"
 CUDA_DRIVER_SHIM_DIR="${CUDA_DRIVER_SHIM_DIR:-.cuda-driver-lib}"
@@ -73,9 +71,6 @@ profile_benchmark() {
     local log="${REPORT_DIR}/${name}_ncu.log"
 
     case "$name" in
-        vector_add)
-            local args=(vector_add "${VECTOR_ADD_SIZE:-16777216}")
-            ;;
         transpose)
             local args=(transpose "${TRANSPOSE_N:-4096}")
             ;;

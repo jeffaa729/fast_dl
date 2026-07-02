@@ -10,7 +10,6 @@ namespace {
 void print_usage(const char* program) {
     std::cout << "Usage:\n"
               << "  " << program << " all\n"
-              << "  " << program << " vector_add [elements]\n"
               << "  " << program << " transpose [n]\n"
               << "  " << program << " reduction [elements]\n"
               << "  " << program << " gemm [m] [n] [k]\n"
@@ -24,8 +23,6 @@ int main(int argc, char** argv) {
 
     if (benchmark == "all") {
         int status = EXIT_SUCCESS;
-        status |= dl::bench::vector_add_benchmark(1ULL << 24);
-        std::cout << '\n';
         status |= dl::bench::transpose_benchmark(4096);
         std::cout << '\n';
         status |= dl::bench::reduction_benchmark(1ULL << 24);
@@ -34,13 +31,6 @@ int main(int argc, char** argv) {
         std::cout << '\n';
         status |= dl::bench::softmax_benchmark(4096, 1024);
         return status == EXIT_SUCCESS ? EXIT_SUCCESS : EXIT_FAILURE;
-    }
-
-    if (benchmark == "vector_add") {
-        const std::size_t size =
-            argc > 2 ? dl::bench::parse_positive_size(argv[2], "vector size")
-                     : 1ULL << 24;
-        return dl::bench::vector_add_benchmark(size);
     }
 
     if (benchmark == "transpose") {

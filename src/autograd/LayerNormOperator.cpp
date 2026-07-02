@@ -23,8 +23,8 @@ std::vector<Tensor> LayerNormOperator::backward(
     }
 
     const Tensor& input = op_inputs[0];
-    const Tensor& grad_output = grad_outputs[0];
-    Tensor grad_input(input.shape(), input.dtype(), input.device());
+    const Tensor& grad_output = grad_outputs[0];  // dL/doutput
+    Tensor grad_input(input.shape(), input.dtype(), input.device());  // dL/dinput
 
     dl::cuda::check(cudaSetDevice(input.device().index), "cudaSetDevice failed");
     dl::kernels::layernorm_backward(
@@ -36,7 +36,9 @@ std::vector<Tensor> LayerNormOperator::backward(
         eps_);
     dl::cuda::check(cudaGetLastError(), "layernorm backward kernel launch failed");
 
-    return {grad_input};
+    return {
+        grad_input,  // dL/dinput
+    };
 }
 
 }  // namespace dl::autograd
