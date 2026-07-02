@@ -50,3 +50,14 @@ grad_input = grad_ouput
     grad_bias // grad of bias
 }
 ```
+for sum_row_kernel, each thread is assigned to 1 col, and perform for loop row sum
+
+4. Cross Entropy
+5. Elementwise
+6. Gemm
+7. layernorm
+8. Optimizer
+9. Random
+10. Reduction
+11. Softmax
+12. Transpose
