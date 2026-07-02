@@ -41,7 +41,7 @@ namespace dl::autograd {
                 continue;
             }
 
-            Tensor grad = output->grad();
+            Tensor grad = output->grad();  // dL/dthis_output
             if (grad.defined()) {
                 result.push_back(grad);
             }

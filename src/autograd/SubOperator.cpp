@@ -10,9 +10,12 @@ std::vector<Tensor> SubOperator::backward(
         throw std::runtime_error("SubOperator backward requires one grad output");
     }
 
-    const Tensor& grad_output = grad_outputs[0];
-    Tensor negative_grad = Tensor::zeros_like(grad_output) - grad_output;
-    return {grad_output, negative_grad};
+    const Tensor& grad_output = grad_outputs[0];  // dL/doutput
+    Tensor negative_grad = Tensor::zeros_like(grad_output) - grad_output;  // dL/dright
+    return {
+        grad_output,    // dL/dleft
+        negative_grad,  // dL/dright
+    };
 }
 
 }  // namespace dl::autograd

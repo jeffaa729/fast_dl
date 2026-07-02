@@ -21,8 +21,8 @@ std::vector<Tensor> ReLUOperator::backward(
     }
 
     const Tensor& input = op_inputs[0];
-    const Tensor& grad_output = grad_outputs[0];
-    Tensor grad_input(input.shape(), input.dtype(), input.device());
+    const Tensor& grad_output = grad_outputs[0];  // dL/doutput
+    Tensor grad_input(input.shape(), input.dtype(), input.device());  // dL/dinput
 
     dl::cuda::check(cudaSetDevice(input.device().index), "cudaSetDevice failed");
     dl::kernels::relu_backward(
@@ -32,7 +32,9 @@ std::vector<Tensor> ReLUOperator::backward(
         static_cast<int>(input.numel()));
     dl::cuda::check(cudaGetLastError(), "relu backward kernel launch failed");
 
-    return {grad_input};
+    return {
+        grad_input,  // dL/dinput
+    };
 }
 
 }  // namespace dl::autograd

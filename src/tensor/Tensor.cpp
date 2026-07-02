@@ -287,8 +287,8 @@ void Tensor::backward(const Tensor& grad) {
         auto op = queue.top();
         queue.pop();
 
-        std::vector<Tensor> grad_outputs = op->grad_outputs();
-        std::vector<Tensor> grad_inputs = op->backward(grad_outputs);
+        std::vector<Tensor> grad_outputs = op->grad_outputs();  // dL/doutputs
+        std::vector<Tensor> grad_inputs = op->backward(grad_outputs);  // dL/dinputs
 
         const std::vector<Tensor>& inputs = op->inputs();
         if (grad_inputs.size() != inputs.size()) {
@@ -302,7 +302,7 @@ void Tensor::backward(const Tensor& grad) {
                 continue;
             }
 
-            input.accumulate_grad(grad_inputs[i]);
+            input.accumulate_grad(grad_inputs[i]);  // accumulate dL/dinput_i
 
             if (input.creator()) {
                 queue.push(input.creator());

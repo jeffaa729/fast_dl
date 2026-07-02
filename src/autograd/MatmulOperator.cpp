@@ -22,14 +22,14 @@ std::vector<Tensor> MatmulOperator::backward(
 
     const Tensor& a = op_inputs[0];
     const Tensor& b = op_inputs[1];
-    const Tensor& grad_output = grad_outputs[0];
+    const Tensor& grad_output = grad_outputs[0];  // dL/doutput
 
     const int m = static_cast<int>(a.shape()[0]);
     const int k = static_cast<int>(a.shape()[1]);
     const int n = static_cast<int>(b.shape()[1]);
 
-    Tensor grad_a(Shape({a.shape()[0], a.shape()[1]}), a.dtype(), a.device());
-    Tensor grad_b(Shape({b.shape()[0], b.shape()[1]}), b.dtype(), b.device());
+    Tensor grad_a(Shape({a.shape()[0], a.shape()[1]}), a.dtype(), a.device());  // dL/da
+    Tensor grad_b(Shape({b.shape()[0], b.shape()[1]}), b.dtype(), b.device());  // dL/db
 
     dl::cuda::check(cudaSetDevice(a.device().index), "cudaSetDevice failed");
 
@@ -55,7 +55,10 @@ std::vector<Tensor> MatmulOperator::backward(
 
     dl::cuda::check(cudaGetLastError(), "matmul backward kernel launch failed");
 
-    return {grad_a, grad_b};
+    return {
+        grad_a,  // dL/da
+        grad_b,  // dL/db
+    };
 }
 
 }  // namespace dl::autograd

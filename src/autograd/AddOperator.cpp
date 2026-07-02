@@ -10,7 +10,11 @@ std::vector<Tensor> AddOperator::backward(
         throw std::runtime_error("AddOperator backward requires one grad output");
     }
 
-    return {grad_outputs[0], grad_outputs[0]};
+    const Tensor& grad_output = grad_outputs[0];  // dL/doutput
+    return {
+        grad_output,  // dL/dleft
+        grad_output,  // dL/dright
+    };
 }
 
 }  // namespace dl::autograd

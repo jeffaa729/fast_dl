@@ -17,14 +17,17 @@ std::vector<Tensor> DivOperator::backward(
         throw std::runtime_error("DivOperator backward requires two inputs");
     }
 
-    const Tensor& grad_output = grad_outputs[0];
+    const Tensor& grad_output = grad_outputs[0];  // dL/doutput
     const Tensor& a = op_inputs[0];
     const Tensor& b = op_inputs[1];
 
-    Tensor grad_a = grad_output / b;
-    Tensor grad_b = Tensor::zeros_like(grad_output) - ((grad_output * a) / (b * b));
+    Tensor grad_a = grad_output / b;  // dL/da
+    Tensor grad_b = Tensor::zeros_like(grad_output) - ((grad_output * a) / (b * b));  // dL/db
 
-    return {grad_a, grad_b};
+    return {
+        grad_a,  // dL/da
+        grad_b,  // dL/db
+    };
 }
 
 }  // namespace dl::autograd

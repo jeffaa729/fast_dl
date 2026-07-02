@@ -17,10 +17,10 @@ std::vector<Tensor> MulOperator::backward(
         throw std::runtime_error("MulOperator backward requires two inputs");
     }
 
-    const Tensor& grad_output = grad_outputs[0];
+    const Tensor& grad_output = grad_outputs[0];  // dL/doutput
     return {
-        grad_output * op_inputs[1],
-        grad_output * op_inputs[0],
+        grad_output * op_inputs[1],  // dL/dleft
+        grad_output * op_inputs[0],  // dL/dright
     };
 }
 
