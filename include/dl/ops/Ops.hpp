@@ -7,3 +7,4 @@
 #include <dl/ops/CrossEntropy.hpp>
 #include <dl/ops/LayerNorm.hpp>
 #include <dl/ops/Linear.hpp>
+#include <dl/ops/Flatten.hpp>
