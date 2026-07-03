@@ -28,3 +28,9 @@ bin/
 *.dylib
 /.cuda-driver-lib
 /ncu_reports
+/python-env
+*.nsys-rep
+*.sqlite
+/python-envVENV_DIR=python-env
+*.csv
+*.log
