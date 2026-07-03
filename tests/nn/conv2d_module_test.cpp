@@ -47,7 +47,8 @@ int main() {
                  params[1]->shape()[0] == 4 &&
                  params[1]->requires_grad() &&
                  params[1]->grad().defined() &&
-                 params[1]->grad().shape().rank() == 1;
+                 params[1]->grad().shape().rank() == 1 &&
+                 layer.num_parameters() == 112;
     } catch (...) {
         passed = false;
     }

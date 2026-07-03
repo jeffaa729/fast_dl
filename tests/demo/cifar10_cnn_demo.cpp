@@ -6,10 +6,8 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <iomanip>
 #include <iostream>
-#include <string>
 #include <vector>
 
 namespace {
@@ -49,60 +47,24 @@ struct Metrics {
     float accuracy = 0.0f;
 };
 
-int env_int(const char* name, int default_value) {
-    const char* value = std::getenv(name);
-    if (value == nullptr) {
-        return default_value;
+const char* cifar10_class_name(int64_t label) {
+    static const char* names[] = {
+        "airplane",
+        "automobile",
+        "bird",
+        "cat",
+        "deer",
+        "dog",
+        "frog",
+        "horse",
+        "ship",
+        "truck",
+    };
+
+    if (label < 0 || label >= 10) {
+        return "unknown";
     }
-
-    const int parsed = std::atoi(value);
-    return parsed > 0 ? parsed : default_value;
-}
-
-int env_non_negative_int(const char* name, int default_value) {
-    const char* value = std::getenv(name);
-    if (value == nullptr) {
-        return default_value;
-    }
-
-    const int parsed = std::atoi(value);
-    return parsed >= 0 ? parsed : default_value;
-}
-
-float env_float(const char* name, float default_value) {
-    const char* value = std::getenv(name);
-    if (value == nullptr) {
-        return default_value;
-    }
-
-    const float parsed = std::strtof(value, nullptr);
-    return parsed > 0.0f ? parsed : default_value;
-}
-
-dl::nn::LinearInit env_linear_init() {
-    const char* value = std::getenv("CIFAR10_LINEAR_INIT");
-    if (value == nullptr) {
-        return dl::nn::LinearInit::KaimingUniform;
-    }
-
-    const std::string name(value);
-    if (name == "xavier") {
-        return dl::nn::LinearInit::XavierUniform;
-    }
-    return dl::nn::LinearInit::KaimingUniform;
-}
-
-dl::nn::Conv2DInit env_conv_init() {
-    const char* value = std::getenv("CIFAR10_CONV_INIT");
-    if (value == nullptr) {
-        return dl::nn::Conv2DInit::KaimingUniform;
-    }
-
-    const std::string name(value);
-    if (name == "xavier") {
-        return dl::nn::Conv2DInit::XavierUniform;
-    }
-    return dl::nn::Conv2DInit::KaimingUniform;
+    return names[label];
 }
 
 const char* linear_init_name(dl::nn::LinearInit init) {
@@ -231,19 +193,21 @@ void print_sample_results(Cifar10CNN& model,
     loader.reset();
 
     demo::cifar10::Cifar10Batch batch = loader.next();
-    const std::vector<int64_t> predictions = predict_classes(model(batch.images));
+    const dl::Tensor logits = model(batch.images);
+    const std::vector<int64_t> predictions = predict_classes(logits);
     const std::vector<int64_t> labels = batch.labels.to_host<int64_t>();
 
     const int count = std::min(
         sample_count,
         static_cast<int>(std::min(predictions.size(), labels.size())));
 
-    std::cout << "samples :";
     for (int i = 0; i < count; ++i) {
-        std::cout << " [" << i << "] pred=" << predictions[static_cast<std::size_t>(i)]
-                  << " label=" << labels[static_cast<std::size_t>(i)];
+        const int64_t prediction = predictions[static_cast<std::size_t>(i)];
+        const int64_t label = labels[static_cast<std::size_t>(i)];
+        std::cout << "sample " << i
+                  << " : predicted=" << cifar10_class_name(prediction)
+                  << " actual=" << cifar10_class_name(label) << "\n";
     }
-    std::cout << "\n";
 
     model.train();
 }
@@ -254,15 +218,15 @@ int main() {
     bool passed = true;
 
     try {
-        const int epochs = env_int("CIFAR10_EPOCHS", 1);
-        const int batch_size = env_int("CIFAR10_BATCH_SIZE", 64);
-        const int max_train_batches = env_non_negative_int("CIFAR10_MAX_TRAIN_BATCHES", 10);
-        const int max_test_batches = env_non_negative_int("CIFAR10_MAX_TEST_BATCHES", 5);
-        const int train_eval_batches = env_non_negative_int("CIFAR10_TRAIN_EVAL_BATCHES", 5);
-        const int sample_count = env_int("CIFAR10_SAMPLES", 3);
-        const float learning_rate = env_float("CIFAR10_LR", 0.01f);
-        const dl::nn::Conv2DInit conv_init = env_conv_init();
-        const dl::nn::LinearInit linear_init = env_linear_init();
+        constexpr int epochs = 1;
+        constexpr int batch_size = 64;
+        constexpr int max_train_batches = 0;
+        constexpr int max_test_batches = 0;
+        constexpr int train_eval_batches = 0;
+        constexpr int sample_count = 10;
+        constexpr float learning_rate = 0.01f;
+        constexpr dl::nn::Conv2DInit conv_init = dl::nn::Conv2DInit::KaimingUniform;
+        constexpr dl::nn::LinearInit linear_init = dl::nn::LinearInit::KaimingUniform;
 
         const dl::Device device(dl::DeviceType::CUDA, 0);
         demo::cifar10::Cifar10DataLoader train_loader(
@@ -280,6 +244,7 @@ int main() {
         dl::optim::SGD optimizer(model.parameters(), learning_rate);
 
         std::cout << "cifar10_cnn_demo : start\n";
+        model.print_parameters();
         std::cout << "config : epochs=" << epochs
                   << " batch_size=" << batch_size
                   << " lr=" << learning_rate

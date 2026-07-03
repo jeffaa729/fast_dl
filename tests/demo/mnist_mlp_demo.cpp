@@ -2,10 +2,8 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <iomanip>
 #include <iostream>
-#include <string>
 #include <vector>
 
 #include <dl/dl.hpp>
@@ -39,49 +37,6 @@ struct Metrics {
     float loss = 0.0f;
     float accuracy = 0.0f;
 };
-
-int env_int(const char* name, int default_value) {
-    const char* value = std::getenv(name);
-    if (value == nullptr) {
-        return default_value;
-    }
-
-    const int parsed = std::atoi(value);
-    return parsed > 0 ? parsed : default_value;
-}
-
-int env_non_negative_int(const char* name, int default_value) {
-    const char* value = std::getenv(name);
-    if (value == nullptr) {
-        return default_value;
-    }
-
-    const int parsed = std::atoi(value);
-    return parsed >= 0 ? parsed : default_value;
-}
-
-float env_float(const char* name, float default_value) {
-    const char* value = std::getenv(name);
-    if (value == nullptr) {
-        return default_value;
-    }
-
-    const float parsed = std::strtof(value, nullptr);
-    return parsed > 0.0f ? parsed : default_value;
-}
-
-dl::nn::LinearInit env_linear_init() {
-    const char* value = std::getenv("MNIST_LINEAR_INIT");
-    if (value == nullptr) {
-        return dl::nn::LinearInit::KaimingUniform;
-    }
-
-    const std::string name(value);
-    if (name == "xavier") {
-        return dl::nn::LinearInit::XavierUniform;
-    }
-    return dl::nn::LinearInit::KaimingUniform;
-}
 
 const char* linear_init_name(dl::nn::LinearInit init) {
     switch (init) {
@@ -222,14 +177,14 @@ int main() {
     bool passed = true;
 
     try {
-        const int epochs = env_int("MNIST_EPOCHS", 10);
-        const int batch_size = env_int("MNIST_BATCH_SIZE", 64);
-        const int max_train_batches = env_non_negative_int("MNIST_MAX_TRAIN_BATCHES", 0);
-        const int max_test_batches = env_non_negative_int("MNIST_MAX_TEST_BATCHES", 0);
-        const int train_eval_batches = env_non_negative_int("MNIST_TRAIN_EVAL_BATCHES", 20);
-        const int sample_count = env_int("MNIST_SAMPLES", 3);
-        const float learning_rate = env_float("MNIST_LR", 0.01f);
-        const dl::nn::LinearInit linear_init = env_linear_init();
+        constexpr int epochs = 20;
+        constexpr int batch_size = 64;
+        constexpr int max_train_batches = 0;
+        constexpr int max_test_batches = 0;
+        constexpr int train_eval_batches = 0;
+        constexpr int sample_count = 3;
+        constexpr float learning_rate = 0.01f;
+        constexpr dl::nn::LinearInit linear_init = dl::nn::LinearInit::KaimingUniform;
 
         const dl::Device device(dl::DeviceType::CUDA, 0);
         demo::mnist::MnistDataLoader train_loader(
@@ -247,6 +202,7 @@ int main() {
         dl::optim::SGD optimizer(model.parameters(), learning_rate);
 
         std::cout << "mnist_mlp_demo : start\n";
+        model.print_parameters();
         std::cout << "config : epochs=" << epochs
                   << " batch_size=" << batch_size
                   << " lr=" << learning_rate

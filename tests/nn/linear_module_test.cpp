@@ -36,7 +36,8 @@ int main() {
                  params[0]->shape()[0] == 3 &&
                  params[0]->shape()[1] == 2 &&
                  params[1]->shape().rank() == 1 &&
-                 params[1]->shape()[0] == 2;
+                 params[1]->shape()[0] == 2 &&
+                 layer.num_parameters() == 8;
     } catch (...) {
         passed = false;
     }
