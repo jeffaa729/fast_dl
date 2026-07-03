@@ -24,6 +24,7 @@ find_package(CUDAToolkit REQUIRED)
 add_library(dl_core
     src/autograd/AddOperator.cpp
     src/autograd/AddRowBiasOperator.cpp
+    src/autograd/Conv2DOperator.cpp
     src/autograd/CrossEntropyOperator.cpp
     src/autograd/DivOperator.cpp
     src/autograd/FlattenOperator.cpp
@@ -41,6 +42,7 @@ add_library(dl_core
     src/core/Shape.cpp
     src/ops/Activation.cpp
     src/ops/CrossEntropy.cpp
+    src/ops/Conv2D.cpp
     src/ops/Elementwise.cpp
     src/ops/LayerNorm.cpp
     src/ops/Linear.cpp
@@ -60,6 +62,7 @@ add_library(dl_cuda_kernels
     src/kernels/cuda/activation.cu
     src/kernels/cuda/bias.cu
     src/kernels/cuda/cross_entropy.cu
+    src/kernels/cuda/conv2d.cu
     src/kernels/cuda/elementwise.cu
     src/kernels/cuda/gemm.cu
     src/kernels/cuda/layernorm.cu
@@ -144,6 +147,9 @@ if(DL_BUILD_TESTS)
     add_executable(flatten_tensor_test tests/tensor/flatten_tensor_test.cpp)
     target_link_libraries(flatten_tensor_test PRIVATE dl_core)
 
+    add_executable(conv2d_tensor_test tests/tensor/conv2d_tensor_test.cpp)
+    target_link_libraries(conv2d_tensor_test PRIVATE dl_core)
+
     add_executable(linear_module_test tests/nn/linear_module_test.cpp)
     target_link_libraries(linear_module_test PRIVATE dl_core)
 
@@ -198,6 +204,9 @@ if(DL_BUILD_TESTS)
     add_executable(autograd_flatten_test tests/autograd/autograd_flatten_test.cpp)
     target_link_libraries(autograd_flatten_test PRIVATE dl_core)
 
+    add_executable(autograd_conv2d_test tests/autograd/autograd_conv2d_test.cpp)
+    target_link_libraries(autograd_conv2d_test PRIVATE dl_core)
+
     add_executable(mlp_backward_test tests/autograd/mlp_backward_test.cpp)
     target_link_libraries(mlp_backward_test PRIVATE dl_core)
 
@@ -216,7 +225,7 @@ if(DL_BUILD_TESTS)
     add_executable(mnist_mlp_demo tests/demo/mnist_mlp_demo.cpp)
     target_link_libraries(mnist_mlp_demo PRIVATE dl_core)
 
-    foreach(test_name IN ITEMS tensor_test tensor_copy_test tensor_uniform_test tensor_randn_test softmax_tensor_test matmul_tensor_test gemm_transpose_tensor_test elementwise_tensor_test activation_tensor_test linear_tensor_test cross_entropy_tensor_test layernorm_tensor_test flatten_tensor_test linear_module_test linear_init_test linear_kaiming_init_test relu_module_test sequential_module_test custom_module_test module_mode_test autograd_add_test no_grad_guard_test autograd_sub_test autograd_mul_test autograd_div_test autograd_relu_test autograd_matmul_test autograd_linear_test autograd_cross_entropy_test autograd_layernorm_test autograd_flatten_test mlp_backward_test training_loop_test mnist_dataloader_test cifar10_dataloader_test dataloader_test mnist_mlp_demo)
+    foreach(test_name IN ITEMS tensor_test tensor_copy_test tensor_uniform_test tensor_randn_test softmax_tensor_test matmul_tensor_test gemm_transpose_tensor_test elementwise_tensor_test activation_tensor_test linear_tensor_test cross_entropy_tensor_test layernorm_tensor_test flatten_tensor_test conv2d_tensor_test linear_module_test linear_init_test linear_kaiming_init_test relu_module_test sequential_module_test custom_module_test module_mode_test autograd_add_test no_grad_guard_test autograd_sub_test autograd_mul_test autograd_div_test autograd_relu_test autograd_matmul_test autograd_linear_test autograd_cross_entropy_test autograd_layernorm_test autograd_flatten_test autograd_conv2d_test mlp_backward_test training_loop_test mnist_dataloader_test cifar10_dataloader_test dataloader_test mnist_mlp_demo)
         add_test(NAME ${test_name} COMMAND ${test_name})
         set_tests_properties(${test_name} PROPERTIES
             WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}")
