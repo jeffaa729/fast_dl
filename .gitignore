@@ -34,3 +34,5 @@ mnist_profile.nsys-rep
 /python-env
 /python-envVENV_DIR=python-env
 /outputs
+*.nsys-rep
+*.sqlite

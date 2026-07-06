@@ -18,27 +18,39 @@ public:
                dl::nn::Conv2DInit conv_init,
                dl::nn::LinearInit linear_init)
         : conv1_(3, 16, 3, device, 1, 1, conv_init),
-          relu_(),
-          pool_(2),
-          fc_(16 * 16 * 16, 10, device, linear_init) {
+          relu1_(),
+          pool1_(2),
+          conv2_(16, 32, 3, device, 1, 1, conv_init),
+          relu2_(),
+          pool2_(2),
+          fc_(32 * 8 * 8, 10, device, linear_init) {
         register_module(conv1_);
-        register_module(relu_);
-        register_module(pool_);
+        register_module(relu1_);
+        register_module(pool1_);
+        register_module(conv2_);
+        register_module(relu2_);
+        register_module(pool2_);
         register_module(fc_);
     }
 
     dl::Tensor forward(const dl::Tensor& input) override {
         dl::Tensor x = conv1_(input);
-        x = relu_(x);
-        x = pool_(x);
+        x = relu1_(x);
+        x = pool1_(x);
+        x = conv2_(x);
+        x = relu2_(x);
+        x = pool2_(x);
         x = dl::ops::flatten(x);
         return fc_(x);
     }
 
 private:
     dl::nn::Conv2D conv1_;
-    dl::nn::ReLU relu_;
-    dl::nn::MaxPool2D pool_;
+    dl::nn::ReLU relu1_;
+    dl::nn::MaxPool2D pool1_;
+    dl::nn::Conv2D conv2_;
+    dl::nn::ReLU relu2_;
+    dl::nn::MaxPool2D pool2_;
     dl::nn::Linear fc_;
 };
 
