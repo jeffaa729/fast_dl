@@ -5,7 +5,10 @@
 #include <cmath>
 
 namespace {
-    __global__ void conv2d_kernel(const float* input, const float* weight, const float* bias,
+    constexpr int kConv2DTile = 16;
+    constexpr int kConv2DSharedTile = kConv2DTile + 2;
+
+    __global__ void conv2d_naive_kernel(const float* input, const float* weight, const float* bias,
                        float* output, int batch_size, int C_in, int H,
                        int W, int C_out, int K_h,
                        int K_w, int H_out, int W_out, int stride, int padding) {
@@ -34,6 +37,66 @@ namespace {
             }
         }
         output[idx] = sum;
+    }
+
+    // Specialized forward path for K=3x3, stride=1, padding=1.
+    __global__ void conv2d_3x3_tiled_kernel(const float* input, const float* weight, const float* bias,
+                       float* output, int batch_size, int C_in, int H,
+                       int W, int C_out, int H_out, int W_out) {
+        const int w_out = blockIdx.x * kConv2DTile + threadIdx.x;
+        const int h_out = blockIdx.y * kConv2DTile + threadIdx.y;
+        const int c_out = blockIdx.z % C_out;
+        const int n = blockIdx.z / C_out;
+
+        if (n >= batch_size) {
+            return;
+        }
+
+        __shared__ float input_tile[kConv2DSharedTile][kConv2DSharedTile];
+
+        float sum = bias[c_out];
+        const int thread_linear = threadIdx.y * blockDim.x + threadIdx.x;
+        const int threads_per_block = blockDim.x * blockDim.y;
+        const int shared_elements = kConv2DSharedTile * kConv2DSharedTile;
+
+        for (int ci = 0; ci < C_in; ++ci) {
+            for (int tile_idx = thread_linear;
+                 tile_idx < shared_elements;
+                 tile_idx += threads_per_block) {
+                const int tile_y = tile_idx / kConv2DSharedTile;
+                const int tile_x = tile_idx % kConv2DSharedTile;
+                const int h_in = blockIdx.y * kConv2DTile + tile_y - 1;
+                const int w_in = blockIdx.x * kConv2DTile + tile_x - 1;
+
+                float value = 0.0f;
+                if (h_in >= 0 && h_in < H && w_in >= 0 && w_in < W) {
+                    const int input_idx =
+                        ((n * C_in + ci) * H + h_in) * W + w_in;
+                    value = input[input_idx];
+                }
+                input_tile[tile_y][tile_x] = value;
+            }
+            __syncthreads();
+
+            if (h_out < H_out && w_out < W_out) {
+                for (int kh = 0; kh < 3; ++kh) {
+                    for (int kw = 0; kw < 3; ++kw) {
+                        const int weight_idx =
+                            ((c_out * C_in + ci) * 3 + kh) * 3 + kw;
+                        sum += input_tile[threadIdx.y + kh][threadIdx.x + kw] *
+                               weight[weight_idx];
+                    }
+                }
+            }
+
+            __syncthreads();
+        }
+
+        if (h_out < H_out && w_out < W_out) {
+            const int output_idx =
+                ((n * C_out + c_out) * H_out + h_out) * W_out + w_out;
+            output[output_idx] = sum;
+        }
     }
 
     __global__ void conv2d_backward_input_kernel(const float* grad_output,
@@ -173,14 +236,85 @@ namespace {
 
 namespace dl::kernels {
 
-void conv2d(const float* input, const float* weight, const float* bias,
+void conv2d_naive(const float* input, const float* weight, const float* bias,
             float* output, int batch_size, int C_in, int H,
             int W, int C_out, int K_h,
             int K_w, int H_out, int W_out, int stride, int padding) {
     const int total = batch_size * C_out * H_out * W_out;
     const int block_size = 256;
     const int num_blocks = (total + block_size - 1) / block_size;
-    conv2d_kernel<<<num_blocks, block_size>>>(
+    conv2d_naive_kernel<<<num_blocks, block_size>>>(
+        input,
+        weight,
+        bias,
+        output,
+        batch_size,
+        C_in,
+        H,
+        W,
+        C_out,
+        K_h,
+        K_w,
+        H_out,
+        W_out,
+        stride,
+        padding);
+}
+
+void conv2d_3x3_tiled(const float* input, const float* weight, const float* bias,
+            float* output, int batch_size, int C_in, int H,
+            int W, int C_out, int K_h,
+            int K_w, int H_out, int W_out, int stride, int padding) {
+    (void)K_h;
+    (void)K_w;
+    (void)stride;
+    (void)padding;
+
+    dim3 block(kConv2DTile, kConv2DTile);
+    dim3 grid(
+        (W_out + kConv2DTile - 1) / kConv2DTile,
+        (H_out + kConv2DTile - 1) / kConv2DTile,
+        batch_size * C_out
+    );
+    conv2d_3x3_tiled_kernel<<<grid, block>>>(
+        input,
+        weight,
+        bias,
+        output,
+        batch_size,
+        C_in,
+        H,
+        W,
+        C_out,
+        H_out,
+        W_out);
+}
+
+void conv2d(const float* input, const float* weight, const float* bias,
+            float* output, int batch_size, int C_in, int H,
+            int W, int C_out, int K_h,
+            int K_w, int H_out, int W_out, int stride, int padding) {
+    if (K_h == 3 && K_w == 3 && stride == 1 && padding == 1) {
+        conv2d_3x3_tiled(
+            input,
+            weight,
+            bias,
+            output,
+            batch_size,
+            C_in,
+            H,
+            W,
+            C_out,
+            K_h,
+            K_w,
+            H_out,
+            W_out,
+            stride,
+            padding);
+        return;
+    }
+
+    conv2d_naive(
         input,
         weight,
         bias,

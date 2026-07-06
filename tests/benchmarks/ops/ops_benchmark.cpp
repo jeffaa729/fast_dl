@@ -211,6 +211,31 @@ Result benchmark_cross_entropy(const dl::Device& device,
                        total_ms);
 }
 
+Result benchmark_conv2d_3x3(const dl::Device& device,
+                            int warmup,
+                            int iterations) {
+    constexpr int batch = 64;
+    constexpr int c_in = 16;
+    constexpr int height = 16;
+    constexpr int width = 16;
+    constexpr int c_out = 32;
+    constexpr int kernel = 3;
+
+    dl::Tensor x = randn(dl::Shape({batch, c_in, height, width}), device, 700);
+    dl::Tensor weight = randn(
+        dl::Shape({c_out, c_in, kernel, kernel}), device, 701);
+    dl::Tensor bias = dl::Tensor::zeros(
+        dl::Shape({c_out}), dl::DType::Float32, device);
+
+    const float total_ms = time_cuda_ms(warmup, iterations, [&] {
+        dl::Tensor y = dl::ops::conv2d(x, weight, bias, 1, 1);
+        (void)y.data();
+    });
+
+    return make_result("conv2d_3x3", "64x16x16x16->32", warmup, iterations,
+                       total_ms);
+}
+
 void write_csv(const std::string& path, const std::vector<Result>& results) {
     const std::filesystem::path output_path(path);
     if (output_path.has_parent_path()) {
@@ -295,6 +320,7 @@ int main() {
                                           340, dl::ops::tanh));
         results.push_back(benchmark_matmul(device, warmup, iterations));
         results.push_back(benchmark_linear(device, warmup, iterations));
+        results.push_back(benchmark_conv2d_3x3(device, warmup, iterations));
         results.push_back(benchmark_softmax(device, warmup, iterations));
         results.push_back(benchmark_layernorm(device, warmup, iterations));
         results.push_back(benchmark_cross_entropy(device, warmup, iterations));

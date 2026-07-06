@@ -159,6 +159,29 @@ def benchmark_cross_entropy(
     return make_result("cross_entropy", "4096x1000", warmup, iterations, total_ms)
 
 
+def benchmark_conv2d_3x3(device: torch.device, warmup: int, iterations: int) -> Result:
+    batch, c_in, height, width = 64, 16, 16, 16
+    c_out, kernel = 32, 3
+    generator = torch.Generator(device=device).manual_seed(700)
+    x = torch.randn(
+        (batch, c_in, height, width),
+        device=device,
+        dtype=torch.float32,
+        generator=generator,
+    )
+    weight = torch.randn(
+        (c_out, c_in, kernel, kernel),
+        device=device,
+        dtype=torch.float32,
+        generator=generator,
+    )
+    bias = torch.zeros((c_out,), device=device, dtype=torch.float32)
+    total_ms = time_cuda_ms(
+        warmup, iterations, lambda: F.conv2d(x, weight, bias, stride=1, padding=1)
+    )
+    return make_result("conv2d_3x3", "64x16x16x16->32", warmup, iterations, total_ms)
+
+
 def write_csv(path: str, results: List[Result]) -> None:
     output_path = Path(path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -225,6 +248,7 @@ def main() -> int:
         benchmark_unary("tanh", device, warmup, iterations, 340, torch.tanh),
         benchmark_matmul(device, warmup, iterations),
         benchmark_linear(device, warmup, iterations),
+        benchmark_conv2d_3x3(device, warmup, iterations),
         benchmark_softmax(device, warmup, iterations),
         benchmark_layernorm(device, warmup, iterations),
         benchmark_cross_entropy(device, warmup, iterations),
