@@ -9,3 +9,4 @@
 #include <dl/ops/Linear.hpp>
 #include <dl/ops/Flatten.hpp>
 #include <dl/ops/Conv2D.hpp>
+#include <dl/ops/MaxPool2D.hpp>

@@ -2,6 +2,8 @@
 
 #include <dl/tensor/Tensor.hpp>
 
+#include <cstdint>
+#include <iostream>
 #include <vector>
 
 namespace dl::nn {
@@ -19,6 +21,20 @@ public:
             result.insert(result.end(), child_params.begin(), child_params.end());
         }
         return result;
+    }
+
+    int64_t num_parameters() {
+        int64_t total = 0;
+        for (const Tensor* parameter : parameters()) {
+            if (parameter != nullptr && parameter->defined()) {
+                total += parameter->numel();
+            }
+        }
+        return total;
+    }
+
+    void print_parameters(std::ostream& os = std::cout) {
+        os << "parameters : " << num_parameters() << "\n";
     }
 
     Tensor operator()(const Tensor& input) {
