@@ -215,11 +215,11 @@ def main() -> int:
         print("pytorch_mnist_mlp_benchmark_error : CUDA is not available", file=sys.stderr)
         return 1
 
-    epochs = env_int("MNIST_EPOCHS", 10)
+    epochs = env_int("MNIST_EPOCHS", 20)
     batch_size = env_int("MNIST_BATCH_SIZE", 64)
     max_train_batches = env_non_negative_int("MNIST_MAX_TRAIN_BATCHES", 0)
     max_test_batches = env_non_negative_int("MNIST_MAX_TEST_BATCHES", 0)
-    train_eval_batches = env_non_negative_int("MNIST_TRAIN_EVAL_BATCHES", 20)
+    train_eval_batches = env_non_negative_int("MNIST_TRAIN_EVAL_BATCHES", 0)
     learning_rate = env_float("MNIST_LR", 0.01)
     init = env_string("MNIST_LINEAR_INIT", "kaiming")
     csv_path = env_string(

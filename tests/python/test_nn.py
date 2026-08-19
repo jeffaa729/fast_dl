@@ -24,7 +24,9 @@ def test_relu_module_forward():
 def test_sequential_forward():
     device = dl.cuda(0)
     model = dl.Sequential()
-    model.add_linear(3, 4, device).add_relu().add_linear(4, 2, device)
+    model.add_linear(3, 4, device)
+    model.add_relu()
+    model.add_linear(4, 2, device)
     x = dl.Tensor.randn((5, 3), dl.float32, device)
 
     y = model(x)

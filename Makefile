@@ -2,9 +2,11 @@ BUILD_DIR ?= build
 CMAKE ?= cmake
 CTEST ?= ctest
 BUILD_TYPE ?= Release
-PYTHON ?= python3
+UV ?= uv
+CUDA_HOME ?= /usr/local/cuda-13.3
+CUDACXX ?= $(CUDA_HOME)/bin/nvcc
 
-.PHONY: all configure build test tests benchmarks ops_benchmark dl_benchmarks python-install python-test python-examples python-benchmark demos mnist cifar clean clean-generated
+.PHONY: all configure build test tests benchmarks ops_benchmark dl_benchmarks python-sync python-test python-examples python-benchmark demos mnist cifar clean clean-generated
 
 all: build
 
@@ -30,22 +32,22 @@ dl_benchmarks: configure
 	$(CMAKE) --build $(BUILD_DIR) --target dl_benchmarks
 	./$(BUILD_DIR)/dl_benchmarks
 
-python-install:
-	$(PYTHON) -m pip install -e ".[test,benchmark]"
+python-sync:
+	CUDACXX=$(CUDACXX) $(UV) sync --extra test --extra benchmark
 
-python-test: python-install
-	$(PYTHON) -m pytest tests/python
+python-test: python-sync
+	$(UV) run pytest tests/python
 
-python-examples: python-install
-	$(PYTHON) examples/minimal.py
-	$(PYTHON) examples/mnist_mlp.py
-	$(PYTHON) examples/cifar10_cnn.py
-	$(PYTHON) examples/tiny_gpt.py
+python-examples: python-sync
+	$(UV) run python examples/minimal.py
+	$(UV) run python examples/mnist_mlp.py
+	$(UV) run python examples/cifar10_cnn.py
+	$(UV) run python examples/tiny_gpt.py
 
-python-benchmark: benchmarks python-install
-	$(PYTHON) benchmarks/python/dl_ops_benchmark.py
-	$(PYTHON) benchmarks/python/pytorch_ops_benchmark.py
-	$(PYTHON) benchmarks/python/compare_ops.py
+python-benchmark: benchmarks python-sync
+	$(UV) run python benchmarks/python/dl_ops_benchmark.py
+	$(UV) run python benchmarks/python/pytorch_ops_benchmark.py
+	$(UV) run python benchmarks/python/compare_ops.py
 
 demos: configure
 	$(CMAKE) --build $(BUILD_DIR) --target mnist_mlp_demo cifar10_cnn_demo
@@ -64,6 +66,6 @@ clean:
 clean-generated:
 	$(CMAKE) -E rm -rf build build-* build-nmake
 	$(CMAKE) -E rm -rf benchmark_results ncu_reports outputs
-	$(CMAKE) -E rm -rf python-env python-envVENV_DIR=python-env .venv
+	$(CMAKE) -E rm -rf .venv python-env python-envVENV_DIR=python-env
 	$(CMAKE) -E rm -rf .cuda-driver-lib
 	$(CMAKE) -E rm -f *.nsys-rep *.ncu-rep *.sqlite

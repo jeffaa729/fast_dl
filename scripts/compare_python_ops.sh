@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PYTHON_BIN="${PYTHON:-python3}"
+UV_BIN="${UV:-uv}"
 BUILD_DIR="${BUILD_DIR:-build}"
 ITERATIONS="${ITERATIONS:-100}"
 WARMUP="${WARMUP:-10}"
+CUDA_HOME="${CUDA_HOME:-/usr/local/cuda-13.3}"
+export CUDACXX="${CUDACXX:-${CUDA_HOME}/bin/nvcc}"
 
 echo "build : cpp ops benchmark"
 cmake -S . -B "${BUILD_DIR}" -DCMAKE_BUILD_TYPE=Release
 cmake --build "${BUILD_DIR}" --target ops_benchmark
 
 echo
-echo "install : dl python api"
-"${PYTHON_BIN}" -m pip install -e ".[test,benchmark]"
+echo "python : sync"
+"${UV_BIN}" sync --extra test --extra benchmark
 
 echo
 echo "test : python api"
-"${PYTHON_BIN}" -m pytest tests/python
+"${UV_BIN}" run pytest tests/python
 
 echo
 echo "benchmark : cpp dl ops"
@@ -24,16 +26,16 @@ echo "benchmark : cpp dl ops"
 
 echo
 echo "benchmark : python dl ops"
-"${PYTHON_BIN}" benchmarks/python/dl_ops_benchmark.py \
+"${UV_BIN}" run python benchmarks/python/dl_ops_benchmark.py \
     --iterations "${ITERATIONS}" \
     --warmup "${WARMUP}"
 
 echo
 echo "benchmark : pytorch python ops"
-"${PYTHON_BIN}" benchmarks/python/pytorch_ops_benchmark.py \
+"${UV_BIN}" run python benchmarks/python/pytorch_ops_benchmark.py \
     --iterations "${ITERATIONS}" \
     --warmup "${WARMUP}"
 
 echo
 echo "compare : ops"
-"${PYTHON_BIN}" benchmarks/python/compare_ops.py
+"${UV_BIN}" run python benchmarks/python/compare_ops.py

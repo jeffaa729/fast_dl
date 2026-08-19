@@ -4,6 +4,7 @@
 
 #include <cuda_runtime.h>
 
+#include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
 #include <pybind11/stl.h>
@@ -36,6 +37,35 @@ dl::Tensor tensor_from_int64_list(const std::vector<int64_t>& values,
                                   const std::vector<int64_t>& dims,
                                   const dl::Device& device) {
     return dl::Tensor::from_host<int64_t>(values, make_shape(dims), device);
+}
+
+std::vector<int64_t> array_shape(const py::buffer_info& info) {
+    std::vector<int64_t> dims;
+    dims.reserve(static_cast<std::size_t>(info.ndim));
+    for (py::ssize_t dim : info.shape) {
+        dims.push_back(static_cast<int64_t>(dim));
+    }
+    return dims;
+}
+
+dl::Tensor tensor_from_numpy(py::array array, const dl::Device& device) {
+    const py::buffer_info info = array.request();
+    if ((array.flags() & py::array::c_style) == 0) {
+        throw std::runtime_error("Tensor.from_numpy requires a contiguous NumPy array");
+    }
+
+    dl::DType dtype;
+    if (array.dtype().is(py::dtype::of<float>())) {
+        dtype = dl::DType::Float32;
+    } else if (array.dtype().is(py::dtype::of<int64_t>())) {
+        dtype = dl::DType::Int64;
+    } else {
+        throw std::runtime_error("Tensor.from_numpy supports float32 and int64 arrays only");
+    }
+
+    dl::Tensor tensor(make_shape(array_shape(info)), dtype, device);
+    tensor.copy_from_host(info.ptr, tensor.nbytes());
+    return tensor;
 }
 
 std::vector<float> tensor_to_float_list(const dl::Tensor& tensor) {
@@ -173,6 +203,7 @@ PYBIND11_MODULE(_C, m) {
         }, py::arg("shape"), py::arg("dtype") = dl::DType::Float32, py::arg("device") = dl::Device(), py::arg("low") = 0.0f, py::arg("high") = 1.0f, py::arg("seed") = 1234)
         .def_static("from_list", &tensor_from_float_list, py::arg("values"), py::arg("shape"), py::arg("device") = dl::Device())
         .def_static("from_int64_list", &tensor_from_int64_list, py::arg("values"), py::arg("shape"), py::arg("device") = dl::Device())
+        .def_static("from_numpy", &tensor_from_numpy, py::arg("array"), py::arg("device") = dl::Device())
         .def("tolist", &tensor_to_float_list)
         .def("to_int64_list", &tensor_to_int64_list)
         .def_property_readonly("shape", [](const dl::Tensor& tensor) {
@@ -314,12 +345,10 @@ PYBIND11_MODULE(_C, m) {
                 out_features,
                 device,
                 init));
-            return &seq;
-        }, py::arg("in_features"), py::arg("out_features"), py::arg("device"), py::arg("init") = dl::nn::LinearInit::KaimingUniform, py::return_value_policy::reference)
+        }, py::arg("in_features"), py::arg("out_features"), py::arg("device"), py::arg("init") = dl::nn::LinearInit::KaimingUniform)
         .def("add_relu", [](dl::nn::Sequential& seq) {
             seq.add(std::make_unique<dl::nn::ReLU>());
-            return &seq;
-        }, py::return_value_policy::reference)
+        })
         .def("add_conv2d", [](dl::nn::Sequential& seq,
                               int in_channels,
                               int out_channels,
@@ -336,8 +365,7 @@ PYBIND11_MODULE(_C, m) {
                 stride,
                 padding,
                 init));
-            return &seq;
-        }, py::arg("in_channels"), py::arg("out_channels"), py::arg("kernel_size"), py::arg("device"), py::arg("stride") = 1, py::arg("padding") = 0, py::arg("init") = dl::nn::Conv2DInit::KaimingUniform, py::return_value_policy::reference)
+        }, py::arg("in_channels"), py::arg("out_channels"), py::arg("kernel_size"), py::arg("device"), py::arg("stride") = 1, py::arg("padding") = 0, py::arg("init") = dl::nn::Conv2DInit::KaimingUniform)
         .def("add_max_pool2d", [](dl::nn::Sequential& seq,
                                   int kernel_size,
                                   int stride,
@@ -346,8 +374,7 @@ PYBIND11_MODULE(_C, m) {
                 kernel_size,
                 stride,
                 padding));
-            return &seq;
-        }, py::arg("kernel_size"), py::arg("stride") = -1, py::arg("padding") = 0, py::return_value_policy::reference)
+        }, py::arg("kernel_size"), py::arg("stride") = -1, py::arg("padding") = 0)
         .def("forward", &dl::nn::Sequential::forward)
         .def("__call__", [](dl::nn::Sequential& module, const dl::Tensor& input) {
             return module.forward(input);
