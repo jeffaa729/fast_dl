@@ -236,6 +236,20 @@ Result benchmark_conv2d_3x3(const dl::Device& device,
                        total_ms);
 }
 
+Result benchmark_max_pool2d(const dl::Device& device,
+                            int warmup,
+                            int iterations) {
+    dl::Tensor x = randn(dl::Shape({64, 32, 32, 32}), device, 800);
+
+    const float total_ms = time_cuda_ms(warmup, iterations, [&] {
+        dl::Tensor y = dl::ops::max_pool2d(x, 2);
+        (void)y.data();
+    });
+
+    return make_result("max_pool2d", "64x32x32x32,k=2", warmup, iterations,
+                       total_ms);
+}
+
 void write_csv(const std::string& path, const std::vector<Result>& results) {
     const std::filesystem::path output_path(path);
     if (output_path.has_parent_path()) {
@@ -324,6 +338,7 @@ int main() {
         results.push_back(benchmark_softmax(device, warmup, iterations));
         results.push_back(benchmark_layernorm(device, warmup, iterations));
         results.push_back(benchmark_cross_entropy(device, warmup, iterations));
+        results.push_back(benchmark_max_pool2d(device, warmup, iterations));
 
         write_csv(csv_path, results);
         print_results(results);

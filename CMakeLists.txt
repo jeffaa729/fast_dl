@@ -18,6 +18,7 @@ set(CMAKE_CUDA_EXTENSIONS OFF)
 
 option(DL_BUILD_TESTS "Build dl test executables" ON)
 option(DL_BUILD_BENCHMARKS "Build CUDA benchmark executable" ON)
+option(DL_BUILD_PYTHON "Build Python bindings" OFF)
 
 find_package(CUDAToolkit REQUIRED)
 
@@ -76,6 +77,11 @@ add_library(dl_cuda_kernels
     src/kernels/cuda/softmax.cu
     src/kernels/cuda/transpose.cu
     src/kernels/cuda/random.cu
+)
+
+set_target_properties(dl_core dl_cuda_kernels
+    PROPERTIES
+        POSITION_INDEPENDENT_CODE ON
 )
 
 target_include_directories(dl_core
@@ -254,7 +260,7 @@ endif()
 
 if(DL_BUILD_BENCHMARKS)
     add_executable(ops_benchmark
-        tests/benchmarks/ops/ops_benchmark.cpp
+        benchmarks/cpp/ops_benchmark.cpp
     )
     target_include_directories(ops_benchmark
         PRIVATE
@@ -278,4 +284,29 @@ if(DL_BUILD_BENCHMARKS)
     )
 
     target_link_libraries(dl_benchmarks PRIVATE dl_cuda_kernels)
+endif()
+
+if(DL_BUILD_PYTHON)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+
+    execute_process(
+        COMMAND "${Python3_EXECUTABLE}" -m pybind11 --cmakedir
+        OUTPUT_VARIABLE PYBIND11_CMAKE_DIR
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if(PYBIND11_CMAKE_DIR)
+        list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_CMAKE_DIR}")
+    endif()
+
+    find_package(pybind11 CONFIG REQUIRED)
+
+    pybind11_add_module(_C bindings/python/bindings.cpp)
+    target_link_libraries(_C PRIVATE dl_core)
+    target_include_directories(_C
+        PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+            ${CMAKE_CURRENT_SOURCE_DIR}/include/dl
+    )
+    install(TARGETS _C LIBRARY DESTINATION dl)
 endif()

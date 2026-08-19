@@ -2,8 +2,9 @@ BUILD_DIR ?= build
 CMAKE ?= cmake
 CTEST ?= ctest
 BUILD_TYPE ?= Release
+PYTHON ?= python3
 
-.PHONY: all configure build test tests benchmarks ops_benchmark dl_benchmarks demos mnist cifar clean clean-generated
+.PHONY: all configure build test tests benchmarks ops_benchmark dl_benchmarks python-install python-test python-examples python-benchmark demos mnist cifar clean clean-generated
 
 all: build
 
@@ -28,6 +29,23 @@ ops_benchmark: configure
 dl_benchmarks: configure
 	$(CMAKE) --build $(BUILD_DIR) --target dl_benchmarks
 	./$(BUILD_DIR)/dl_benchmarks
+
+python-install:
+	$(PYTHON) -m pip install -e ".[test,benchmark]"
+
+python-test: python-install
+	$(PYTHON) -m pytest tests/python
+
+python-examples: python-install
+	$(PYTHON) examples/minimal.py
+	$(PYTHON) examples/mnist_mlp.py
+	$(PYTHON) examples/cifar10_cnn.py
+	$(PYTHON) examples/tiny_gpt.py
+
+python-benchmark: benchmarks python-install
+	$(PYTHON) benchmarks/python/dl_ops_benchmark.py
+	$(PYTHON) benchmarks/python/pytorch_ops_benchmark.py
+	$(PYTHON) benchmarks/python/compare_ops.py
 
 demos: configure
 	$(CMAKE) --build $(BUILD_DIR) --target mnist_mlp_demo cifar10_cnn_demo
