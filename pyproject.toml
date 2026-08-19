@@ -1,0 +1,31 @@
+[project]
+name = "dl"
+version = "0.1.0"
+description = "A small C++ GPU-accelerated deep learning library using CUDA"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=2.2.6",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0.0",
+]
+benchmark = [
+    "torch>=2.13.0",
+]
+
+[project.scripts]
+dl = "dl:main"
+
+[build-system]
+requires = [
+    "scikit-build-core>=0.10.0",
+    "pybind11>=2.12.0",
+]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+wheel.packages = ["src/dl"]
+cmake.args = ["-DDL_BUILD_PYTHON=ON", "-DDL_BUILD_TESTS=OFF", "-DDL_BUILD_BENCHMARKS=OFF"]
