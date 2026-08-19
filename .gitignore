@@ -1,38 +1,37 @@
-# Compiled object files
-*.o
-
-# Executables
-main
-test_layers
-test_oop
-test_network
-
-# Eigen library (if included, or let users install separately)
-eigen-5.0.0/
-
-# macOS
-.DS_Store
-
-# Editor files
-*.swp
-*~
-.vscode/
-.idea/
-
-# Build artifacts (if any)
+# Build artifacts
 build/
 build-*/
+build-nmake/
 bin/
+*.o
 *.a
 *.so
 *.dylib
-/.cuda-driver-lib
-/ncu_reports
+
+# Generated benchmark/profile output
+benchmark_results/
+ncu_reports/
+outputs/
+*.nsys-rep
+*.ncu-rep
+*.sqlite
 mnist_profile.sqlite
 mnist_profile.nsys-rep
-/benchmark_results
-/python-env
-/python-envVENV_DIR=python-env
-/outputs
-*.nsys-rep
-*.sqlite
+
+# Local Python environments
+.venv/
+python-env/
+python-envVENV_DIR=python-env/
+
+# Local CUDA driver shim for WSL/Nsight
+.cuda-driver-lib/
+
+# Third-party local drops
+eigen-5.0.0/
+
+# Editors and OS files
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
